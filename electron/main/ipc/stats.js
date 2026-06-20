@@ -57,7 +57,7 @@ export function registerStatsHandlers() {
     return db.prepare(`
       SELECT COALESCE(c.name,'Sans catégorie') AS name,
              COALESCE(c.color,'#6B7280') AS color,
-             COALESCE(c.icon,'📦') AS icon,
+             COALESCE(c.icon,'') AS icon,
              SUM(t.amount) AS total
       FROM transactions t
       LEFT JOIN categories c ON t.category_id = c.id

@@ -28,6 +28,7 @@ export default defineConfig({
     }
   },
   renderer: {
+    root: __dirname,
     plugins: [react()],
     server: {
       port: 3005

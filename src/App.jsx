@@ -1,24 +1,154 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
-import { Layout }       from './components/Layout/Layout'
-import { Dashboard }    from './components/Dashboard/Dashboard'
-import { Accounts }     from './components/Accounts/Accounts'
-import { Transactions } from './components/Transactions/Transactions'
-import { Forecast }     from './components/Forecast/Forecast'
-import { Charts }       from './components/Charts/Charts'
-import { Settings }     from './components/Settings/Settings'
+import { useState, useCallback } from 'react'
+import { useAsync } from './hooks/useAsync'
+import { BalanceCards } from './components/BalanceCards'
+import { Controls } from './components/Controls'
+import { TableView } from './components/TableView'
+import { GraphView } from './components/GraphView'
+import { TransactionModal } from './components/TransactionModal'
+import { TransferModal } from './components/TransferModal'
+import { AccountModal } from './components/AccountModal'
+import { ForecastModal } from './components/ForecastModal'
+import { SettingsModal } from './components/SettingsModal'
+import { Spinner } from './components/ui/Spinner'
+
+const emptyFilters = { account_id: '', type: '', category_id: '', date_from: '', date_to: '' }
 
 export default function App() {
+  const [filters, setFilters] = useState(emptyFilters)
+  const [showForecast, setShowForecast] = useState(false)
+  const [viewMode, setViewMode] = useState('tableau')
+  const [graphMode, setGraphMode] = useState('nuage')
+
+  const setF = (key, value) => setFilters(f => ({ ...f, [key]: value }))
+
+  const [modal, setModal] = useState(null)
+  const openModal  = (type, data) => setModal({ type, data })
+  const closeModal = () => setModal(null)
+
+  const [tick, setTick] = useState(0)
+  const refetch = useCallback(() => setTick(t => t + 1), [])
+
+  const { data: accounts } = useAsync(
+    () => window.api.accounts.getAll(), [tick]
+  )
+  const { data: categories } = useAsync(
+    () => window.api.categories.getAll(), [tick]
+  )
+  const { data: summary } = useAsync(
+    () => window.api.stats.getSummary(), [tick]
+  )
+  const { data: transactions, loading: loadingTx } = useAsync(() => {
+    const params = {}
+    if (showForecast) params.include_forecast = 1
+    if (filters.account_id)  params.account_id  = filters.account_id
+    if (filters.type)        params.type        = filters.type
+    if (filters.category_id) params.category_id = filters.category_id
+    if (filters.date_from)   params.date_from   = filters.date_from
+    if (filters.date_to)     params.date_to     = filters.date_to
+    return window.api.transactions.getAll(params)
+  }, [tick, filters, showForecast])
+
+  const { data: allTransactions } = useAsync(() => {
+    const params = {}
+    if (showForecast) params.include_forecast = 1
+    if (filters.account_id) params.account_id = filters.account_id
+    return window.api.transactions.getAll(params)
+  }, [tick, showForecast, filters.account_id])
+
+  const handleSave = () => { refetch(); closeModal() }
+
   return (
-    <Layout>
-      <Routes>
-        <Route path="/"             element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard"    element={<Dashboard />} />
-        <Route path="/accounts"     element={<Accounts />} />
-        <Route path="/transactions" element={<Transactions />} />
-        <Route path="/forecast"     element={<Forecast />} />
-        <Route path="/charts"       element={<Charts />} />
-        <Route path="/settings"     element={<Settings />} />
-      </Routes>
-    </Layout>
+    <div className="h-screen flex flex-col bg-gray-950 text-gray-100 overflow-hidden">
+      <BalanceCards
+        summary={summary}
+        selectedAccount={filters.account_id ? Number(filters.account_id) : null}
+        onSelectAccount={id => setF('account_id', id === '' ? '' : String(id))}
+        onAddAccount={() => openModal('account')}
+        onSettings={() => openModal('settings')}
+      />
+
+      <Controls
+        filters={filters}
+        setF={setF}
+        showForecast={showForecast}
+        setShowForecast={setShowForecast}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        graphMode={graphMode}
+        setGraphMode={setGraphMode}
+        categories={categories}
+        onAddTx={() => openModal('tx')}
+        onTransfer={() => openModal('transfer')}
+        onForecast={() => openModal('forecast')}
+      />
+
+      <main className="flex-1 overflow-hidden">
+        {viewMode === 'tableau' ? (
+          loadingTx
+            ? <div className="flex items-center justify-center h-full"><Spinner /></div>
+            : (
+              <TableView
+                transactions={transactions || []}
+                accounts={accounts || []}
+                onEdit={tx => openModal('tx', tx)}
+                onDelete={async id => {
+                  if (!confirm('Supprimer cette transaction ?')) return
+                  await window.api.transactions.remove(id)
+                  refetch()
+                }}
+              />
+            )
+        ) : (
+          <GraphView
+            transactions={allTransactions || []}
+            accounts={accounts || []}
+            graphMode={graphMode}
+          />
+        )}
+      </main>
+
+      {modal?.type === 'tx' && (
+        <TransactionModal
+          isOpen
+          onClose={closeModal}
+          onSave={handleSave}
+          tx={modal.data}
+          accounts={accounts || []}
+          categories={categories || []}
+        />
+      )}
+      {modal?.type === 'transfer' && (
+        <TransferModal
+          isOpen
+          onClose={closeModal}
+          onSave={handleSave}
+          accounts={accounts || []}
+        />
+      )}
+      {modal?.type === 'account' && (
+        <AccountModal
+          isOpen
+          onClose={closeModal}
+          onSave={handleSave}
+          account={modal.data}
+        />
+      )}
+      {modal?.type === 'forecast' && (
+        <ForecastModal
+          isOpen
+          onClose={closeModal}
+          onSave={refetch}
+          accounts={accounts || []}
+          categories={categories || []}
+        />
+      )}
+      {modal?.type === 'settings' && (
+        <SettingsModal
+          isOpen
+          onClose={closeModal}
+          onSave={refetch}
+        />
+      )}
+    </div>
   )
 }

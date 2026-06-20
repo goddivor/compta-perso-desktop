@@ -68,17 +68,17 @@ function seedDefaults() {
   if (count > 0) return
 
   const cats = [
-    { name: 'Nourriture',  flow: 'DEBIT',  color: '#F59E0B', icon: '🍽️' },
-    { name: 'Essence',     flow: 'DEBIT',  color: '#EF4444', icon: '⛽' },
-    { name: 'Transport',   flow: 'DEBIT',  color: '#8B5CF6', icon: '🚌' },
-    { name: 'Santé',       flow: 'DEBIT',  color: '#EC4899', icon: '💊' },
-    { name: 'Vêtements',   flow: 'DEBIT',  color: '#06B6D4', icon: '👕' },
-    { name: 'Loisirs',     flow: 'DEBIT',  color: '#84CC16', icon: '🎮' },
-    { name: 'Factures',    flow: 'DEBIT',  color: '#F97316', icon: '📄' },
-    { name: 'Salaire',     flow: 'CREDIT', color: '#10B981', icon: '💰' },
-    { name: 'Freelance',   flow: 'CREDIT', color: '#3B82F6', icon: '💻' },
-    { name: 'Retrait',     flow: 'BOTH',   color: '#6B7280', icon: '🏦' },
-    { name: 'Autres',      flow: 'BOTH',   color: '#94A3B8', icon: '📦' },
+    { name: 'Nourriture',  flow: 'DEBIT',  color: '#F59E0B', icon: '' },
+    { name: 'Essence',     flow: 'DEBIT',  color: '#EF4444', icon: '' },
+    { name: 'Transport',   flow: 'DEBIT',  color: '#8B5CF6', icon: '' },
+    { name: 'Sante',       flow: 'DEBIT',  color: '#EC4899', icon: '' },
+    { name: 'Vetements',   flow: 'DEBIT',  color: '#06B6D4', icon: '' },
+    { name: 'Loisirs',     flow: 'DEBIT',  color: '#84CC16', icon: '' },
+    { name: 'Factures',    flow: 'DEBIT',  color: '#F97316', icon: '' },
+    { name: 'Salaire',     flow: 'CREDIT', color: '#10B981', icon: '' },
+    { name: 'Freelance',   flow: 'CREDIT', color: '#3B82F6', icon: '' },
+    { name: 'Retrait',     flow: 'BOTH',   color: '#6B7280', icon: '' },
+    { name: 'Autres',      flow: 'BOTH',   color: '#94A3B8', icon: '' },
   ]
 
   const ins = db.prepare(

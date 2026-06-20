@@ -10,11 +10,15 @@ function createWindow() {
     minHeight: 600,
     backgroundColor: '#030712',
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.mjs'),
       sandbox: false,
       contextIsolation: true
     }
   })
+
+  if (process.env['ELECTRON_RENDERER_URL']) {
+    win.webContents.openDevTools({ mode: 'detach' })
+  }
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url)
