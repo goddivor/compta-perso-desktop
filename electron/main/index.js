@@ -16,10 +16,6 @@ function createWindow() {
     }
   })
 
-  if (process.env['ELECTRON_RENDERER_URL']) {
-    win.webContents.openDevTools({ mode: 'detach' })
-  }
-
   win.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url)
     return { action: 'deny' }

@@ -31,7 +31,7 @@ export function registerTransactionsHandlers() {
       LEFT JOIN categories c ON t.category_id = c.id
       LEFT JOIN forecast_sessions fs ON t.forecast_session_id = fs.id
       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
-      ORDER BY t.date DESC, t.created_at DESC
+      ORDER BY t.date ASC, t.created_at ASC
       LIMIT 500
     `
     return db.prepare(sql).all(...params)

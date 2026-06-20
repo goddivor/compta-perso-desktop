@@ -17,7 +17,7 @@ export default function App() {
   const [filters, setFilters] = useState(emptyFilters)
   const [showForecast, setShowForecast] = useState(false)
   const [viewMode, setViewMode] = useState('tableau')
-  const [graphMode, setGraphMode] = useState('nuage')
+  const [graphLayout, setGraphLayout] = useState('vertical')
 
   const setF = (key, value) => setFilters(f => ({ ...f, [key]: value }))
 
@@ -74,8 +74,8 @@ export default function App() {
         setShowForecast={setShowForecast}
         viewMode={viewMode}
         setViewMode={setViewMode}
-        graphMode={graphMode}
-        setGraphMode={setGraphMode}
+        graphLayout={graphLayout}
+        setGraphLayout={setGraphLayout}
         categories={categories}
         onAddTx={() => openModal('tx')}
         onTransfer={() => openModal('transfer')}
@@ -102,7 +102,7 @@ export default function App() {
           <GraphView
             transactions={allTransactions || []}
             accounts={accounts || []}
-            graphMode={graphMode}
+            layout={graphLayout}
           />
         )}
       </main>
@@ -115,6 +115,7 @@ export default function App() {
           tx={modal.data}
           accounts={accounts || []}
           categories={categories || []}
+          defaultAccountId={modal.data ? undefined : filters.account_id}
         />
       )}
       {modal?.type === 'transfer' && (

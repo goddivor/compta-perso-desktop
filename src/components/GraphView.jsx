@@ -1,167 +1,349 @@
 import { useRef, useEffect, useState, useMemo } from 'react'
 import { fmt, fmtDate } from '../utils/format'
 
-const PAD = { top: 24, right: 24, bottom: 44, left: 90 }
-const NODE_R = 5
+const NODE_W  = 172
+const NODE_H  = 74
+const ARROW_H = 10
+const SIM_COLORS = ['#F59E0B', '#818CF8', '#34D399', '#F472B6', '#60A5FA', '#FB923C']
 
-export function GraphView({ transactions, accounts, graphMode }) {
-  const containerRef = useRef()
-  const canvasRef    = useRef()
-  const nodesRef     = useRef([])
+// ── Shared helpers ──────────────────────────────────────────────────────────
+
+function drawArrow(ctx, x1, y1, x2, y2, color, dashed) {
+  const angle = Math.atan2(y2 - y1, x2 - x1)
+  ctx.beginPath()
+  ctx.setLineDash(dashed ? [6, 4] : [])
+  ctx.moveTo(x1, y1)
+  ctx.lineTo(x2, y2)
+  ctx.strokeStyle = color
+  ctx.lineWidth = 1.5
+  ctx.stroke()
+  ctx.setLineDash([])
+  ctx.beginPath()
+  ctx.moveTo(x2, y2)
+  ctx.lineTo(x2 - ARROW_H * Math.cos(angle - Math.PI / 6), y2 - ARROW_H * Math.sin(angle - Math.PI / 6))
+  ctx.lineTo(x2 - ARROW_H * Math.cos(angle + Math.PI / 6), y2 - ARROW_H * Math.sin(angle + Math.PI / 6))
+  ctx.closePath()
+  ctx.fillStyle = color
+  ctx.fill()
+}
+
+function clip(ctx, text, maxW) {
+  if (ctx.measureText(text).width <= maxW) return text
+  let t = text
+  while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1)
+  return t + '…'
+}
+
+function drawNode(ctx, cx, cy, node, color, simColor) {
+  const rx = NODE_W / 2
+  const ry = NODE_H / 2
+  const isSim = !!simColor
+
+  ctx.beginPath()
+  ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2)
+  ctx.fillStyle = isSim ? '#151008' : '#0F172A'
+  ctx.fill()
+  ctx.strokeStyle = isSim ? simColor : color
+  ctx.lineWidth = isSim ? 1.5 : 2
+  ctx.setLineDash(isSim ? [5, 3] : [])
+  ctx.stroke()
+  ctx.setLineDash([])
+
+  const innerW = NODE_W - 24
+  ctx.textAlign = 'center'
+
+  if (node.tx) {
+    const sign   = node.tx.type === 'CREDIT' ? '+' : '-'
+    const amtClr = isSim ? simColor : (node.tx.type === 'CREDIT' ? '#34D399' : '#F87171')
+    ctx.font = '10px system-ui,sans-serif'; ctx.fillStyle = '#6B7280'
+    ctx.fillText(fmtDate(node.date), cx, cy - 22)
+    ctx.font = '11px system-ui,sans-serif'; ctx.fillStyle = isSim ? '#D4C5A0' : '#D1D5DB'
+    ctx.fillText(clip(ctx, node.label, innerW), cx, cy - 6)
+    ctx.font = 'bold 12px system-ui,sans-serif'; ctx.fillStyle = amtClr
+    ctx.fillText(sign + fmt(node.tx.amount), cx, cy + 10)
+    ctx.font = '10px system-ui,sans-serif'; ctx.fillStyle = '#9CA3AF'
+    ctx.fillText('= ' + fmt(node.balance), cx, cy + 26)
+  } else {
+    ctx.font = '10px system-ui,sans-serif'; ctx.fillStyle = '#6B7280'
+    ctx.fillText(fmtDate(node.date), cx, cy - 16)
+    ctx.font = '11px system-ui,sans-serif'; ctx.fillStyle = isSim ? '#D4C5A0' : '#D1D5DB'
+    ctx.fillText(node.label, cx, cy)
+    ctx.font = 'bold 12px system-ui,sans-serif'; ctx.fillStyle = isSim ? simColor : color
+    ctx.fillText(fmt(node.balance), cx, cy + 18)
+  }
+}
+
+function drawTransferLinks(ctx, nodes) {
+  const txNodeMap = {}
+  for (const n of nodes) if (n.point.tx?.id) txNodeMap[n.point.tx.id] = n
+  const done = new Set()
+  for (const n of nodes) {
+    const pairId = n.point.tx?.transfer_pair_id
+    if (!pairId) continue
+    const key = [n.point.tx.id, pairId].sort((a, b) => a - b).join('-')
+    if (done.has(key)) continue
+    done.add(key)
+    const partner = txNodeMap[pairId]
+    if (!partner) continue
+    const left  = n.cx <= partner.cx ? n : partner
+    const right = n.cx <= partner.cx ? partner : n
+    const x1 = left.cx + NODE_W / 2, y1 = left.cy
+    const x2 = right.cx - NODE_W / 2, y2 = right.cy
+    const mx = (x1 + x2) / 2
+    ctx.beginPath(); ctx.setLineDash([5, 4])
+    ctx.strokeStyle = '#6366F1'; ctx.lineWidth = 1.5
+    ctx.moveTo(x1, y1)
+    ctx.bezierCurveTo(mx, y1, mx, y2, x2, y2)
+    ctx.stroke(); ctx.setLineDash([])
+    const ang = Math.atan2(y2 - y1, x2 - x1)
+    ctx.beginPath()
+    ctx.moveTo(x2, y2)
+    ctx.lineTo(x2 - 9 * Math.cos(ang - Math.PI / 6), y2 - 9 * Math.sin(ang - Math.PI / 6))
+    ctx.lineTo(x2 - 9 * Math.cos(ang + Math.PI / 6), y2 - 9 * Math.sin(ang + Math.PI / 6))
+    ctx.closePath(); ctx.fillStyle = '#6366F1'; ctx.fill()
+  }
+}
+
+// ── Vertical layout ─────────────────────────────────────────────────────────
+
+const V = { PAD_X: 30, PAD_Y: 54, COL_W: 220, SIM_COL: 190, ROW_H: 118, SIM_ROW_H: 110 }
+
+function drawVertical(ctx, canvas, realSeries, simBranches, nodesRef) {
+  let xCursor = V.PAD_X
+  const simCountPerAccount = {}
+  simBranches.forEach(sim =>
+    sim.branches.forEach(b => { simCountPerAccount[b.accountId] = (simCountPerAccount[b.accountId] || 0) + 1 })
+  )
+  const realColX = realSeries.map(({ account }) => {
+    const cx = xCursor + V.COL_W / 2
+    xCursor += V.COL_W + (simCountPerAccount[account.id] || 0) * V.SIM_COL
+    return cx
+  })
+
+  const simBranchX = {}
+  simBranches.forEach(sim => {
+    sim.branches.forEach(b => {
+      if (!simBranchX[b.accountId]) simBranchX[b.accountId] = []
+      const colIdx = realSeries.findIndex(s => s.account.id === b.accountId)
+      const base = realColX[colIdx] + V.COL_W / 2
+      simBranchX[b.accountId].push(base + simBranchX[b.accountId].length * V.SIM_COL + V.SIM_COL / 2)
+    })
+  })
+
+  const maxRealRows = Math.max(1, ...realSeries.map(s => s.points.length))
+  const maxSimRows  = simBranches.length > 0
+    ? Math.max(...simBranches.flatMap(s => s.branches.map(b => b.points.length))) : 0
+  canvas.width  = Math.max(xCursor + V.PAD_X, 400)
+  canvas.height = Math.max(
+    V.PAD_Y * 2 + maxRealRows * V.ROW_H + (maxSimRows > 0 ? maxSimRows * V.SIM_ROW_H + 60 : 0),
+    300
+  )
+
+  realSeries.forEach(({ account, points }, colIdx) => {
+    const cx = realColX[colIdx]
+    const color = account.color || '#3B82F6'
+    ctx.font = 'bold 12px system-ui,sans-serif'; ctx.textAlign = 'center'
+    ctx.fillStyle = color
+    ctx.fillText(account.name, cx, V.PAD_Y - 14)
+
+    points.forEach((p, rowIdx) => {
+      const cy = V.PAD_Y + rowIdx * V.ROW_H + NODE_H / 2
+      if (rowIdx > 0)
+        drawArrow(ctx, cx, V.PAD_Y + (rowIdx - 1) * V.ROW_H + NODE_H / 2 + NODE_H / 2, cx, cy - NODE_H / 2, '#374151', false)
+      drawNode(ctx, cx, cy, p, color, null)
+      nodesRef.current.push({ cx, cy, rx: NODE_W / 2, ry: NODE_H / 2, account, point: p })
+    })
+  })
+
+  drawTransferLinks(ctx, nodesRef.current)
+
+  if (!simBranches.length) return
+  const divY = V.PAD_Y + maxRealRows * V.ROW_H + 20
+  ctx.strokeStyle = '#1F2937'; ctx.lineWidth = 1; ctx.setLineDash([4, 6])
+  ctx.beginPath(); ctx.moveTo(V.PAD_X, divY); ctx.lineTo(canvas.width - V.PAD_X, divY); ctx.stroke()
+  ctx.setLineDash([])
+  ctx.font = '10px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#4B5563'
+  ctx.fillText('— routes alternatives —', canvas.width / 2, divY + 14)
+
+  const simStartY = divY + 30
+  const simIdxPerAccount = {}
+  simBranches.forEach(({ simIdx, branches }) => {
+    const simColor = SIM_COLORS[simIdx % SIM_COLORS.length]
+    branches.forEach(({ account, points, accountId }) => {
+      const colIdx = realSeries.findIndex(s => s.account.id === accountId)
+      if (colIdx === -1) return
+      const idx = simIdxPerAccount[accountId] || 0
+      simIdxPerAccount[accountId] = idx + 1
+      const cx = realColX[colIdx] + V.COL_W / 2 + idx * V.SIM_COL + V.SIM_COL / 2
+      ctx.font = 'bold 11px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = simColor
+      ctx.fillText(`Sim ${simIdx + 1} · ${account.name}`, cx, simStartY - 6)
+      const forkY = V.PAD_Y + (realSeries[colIdx].points.length - 1) * V.ROW_H + NODE_H / 2
+      ctx.beginPath(); ctx.arc(realColX[colIdx], forkY, 5, 0, Math.PI * 2)
+      ctx.fillStyle = simColor; ctx.fill()
+      drawArrow(ctx, realColX[colIdx], forkY, cx, simStartY + NODE_H / 2 - NODE_H / 2, simColor, true)
+      points.forEach((p, rowIdx) => {
+        const cy = simStartY + rowIdx * V.SIM_ROW_H + NODE_H / 2
+        if (rowIdx > 0)
+          drawArrow(ctx, cx, simStartY + (rowIdx - 1) * V.SIM_ROW_H + NODE_H / 2 + NODE_H / 2, cx, cy - NODE_H / 2, simColor, true)
+        drawNode(ctx, cx, cy, p, account.color || '#3B82F6', simColor)
+        nodesRef.current.push({ cx, cy, rx: NODE_W / 2, ry: NODE_H / 2, account, point: p, simColor })
+      })
+    })
+  })
+}
+
+// ── Horizontal layout ────────────────────────────────────────────────────────
+
+const H = { PAD_X: 20, PAD_Y: 30, LABEL_W: 82, NODE_STEP: 210, ROW_H: 114, SIM_ROW_H: 108 }
+
+function drawHorizontal(ctx, canvas, realSeries, simBranches, nodesRef) {
+  const maxRealCols = Math.max(1, ...realSeries.map(s => s.points.length))
+  const maxSimCols  = simBranches.length > 0
+    ? Math.max(...simBranches.flatMap(s => s.branches.map(b => b.points.length))) : 0
+
+  const simCountPerAccount = {}
+  simBranches.forEach(sim =>
+    sim.branches.forEach(b => { simCountPerAccount[b.accountId] = (simCountPerAccount[b.accountId] || 0) + 1 })
+  )
+
+  const numSimRows = Object.values(simCountPerAccount).reduce((a, b) => a + b, 0)
+
+  canvas.width  = Math.max(
+    H.PAD_X * 2 + H.LABEL_W + maxRealCols * H.NODE_STEP + (maxSimCols > 0 ? 60 + maxSimCols * H.NODE_STEP : 0),
+    500
+  )
+  canvas.height = Math.max(
+    H.PAD_Y * 2 + realSeries.length * H.ROW_H + numSimRows * H.SIM_ROW_H + (numSimRows > 0 ? 40 : 0),
+    300
+  )
+
+  const rowY = (rowIdx) => H.PAD_Y + rowIdx * H.ROW_H + NODE_H / 2
+  const nodeX = (colIdx) => H.PAD_X + H.LABEL_W + colIdx * H.NODE_STEP + NODE_W / 2
+
+  // Real rows
+  realSeries.forEach(({ account, points }, rowIdx) => {
+    const cy = rowY(rowIdx)
+    const color = account.color || '#3B82F6'
+
+    // Account label on the left
+    ctx.font = 'bold 11px system-ui,sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = color
+    ctx.fillText(account.name, H.PAD_X + H.LABEL_W - 10, cy + 4)
+
+    points.forEach((p, colIdx) => {
+      const cx = nodeX(colIdx)
+      if (colIdx > 0)
+        drawArrow(ctx, nodeX(colIdx - 1) + NODE_W / 2, cy, cx - NODE_W / 2, cy, '#374151', false)
+      drawNode(ctx, cx, cy, p, color, null)
+      nodesRef.current.push({ cx, cy, rx: NODE_W / 2, ry: NODE_H / 2, account, point: p })
+    })
+  })
+
+  drawTransferLinks(ctx, nodesRef.current)
+
+  if (!simBranches.length) return
+
+  // Divider after real rows
+  const divY = H.PAD_Y + realSeries.length * H.ROW_H + 16
+  ctx.strokeStyle = '#1F2937'; ctx.lineWidth = 1; ctx.setLineDash([4, 6])
+  ctx.beginPath(); ctx.moveTo(H.PAD_X, divY); ctx.lineTo(canvas.width - H.PAD_X, divY); ctx.stroke()
+  ctx.setLineDash([])
+  ctx.font = '10px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#4B5563'
+  ctx.fillText('— routes alternatives —', canvas.width / 2, divY + 13)
+
+  const simBaseY = divY + 26
+  let simRowIdx = 0
+
+  simBranches.forEach(({ simIdx, branches }) => {
+    const simColor = SIM_COLORS[simIdx % SIM_COLORS.length]
+    branches.forEach(({ account, points, accountId }) => {
+      const colIdx = realSeries.findIndex(s => s.account.id === accountId)
+      if (colIdx === -1) return
+      const cy = simBaseY + simRowIdx * H.SIM_ROW_H + NODE_H / 2
+
+      // Label
+      ctx.font = 'bold 10px system-ui,sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = simColor
+      ctx.fillText(`Sim ${simIdx + 1} · ${account.name}`, H.PAD_X + H.LABEL_W - 10, cy + 4)
+
+      // Fork indicator on bottom edge of last real node
+      const lastRealCx = nodeX(realSeries[colIdx].points.length - 1)
+      const lastRealCy = rowY(colIdx)
+      ctx.beginPath(); ctx.arc(lastRealCx, lastRealCy + NODE_H / 2, 5, 0, Math.PI * 2)
+      ctx.fillStyle = simColor; ctx.fill()
+      // Fork arrow: bottom of last real node → left edge of first sim node
+      drawArrow(ctx, lastRealCx, lastRealCy + NODE_H / 2, nodeX(0) - NODE_W / 2, cy, simColor, true)
+
+      points.forEach((p, pIdx) => {
+        const cx = nodeX(pIdx)
+        if (pIdx > 0)
+          drawArrow(ctx, nodeX(pIdx - 1) + NODE_W / 2, cy, cx - NODE_W / 2, cy, simColor, true)
+        drawNode(ctx, cx, cy, p, account.color || '#3B82F6', simColor)
+        nodesRef.current.push({ cx, cy, rx: NODE_W / 2, ry: NODE_H / 2, account, point: p, simColor })
+      })
+
+      simRowIdx++
+    })
+  })
+}
+
+// ── Component ────────────────────────────────────────────────────────────────
+
+export function GraphView({ transactions, accounts, layout = 'vertical' }) {
+  const scrollRef = useRef()
+  const canvasRef = useRef()
+  const nodesRef  = useRef([])
   const [tooltip, setTooltip] = useState(null)
 
-  const series = useMemo(() => {
-    if (!accounts || !transactions) return []
-    return accounts
-      .map(account => {
-        const txs = transactions
-          .filter(t => t.account_id === account.id)
-          .sort((a, b) => new Date(a.date) - new Date(b.date))
+  const { realSeries, simBranches } = useMemo(() => {
+    if (!accounts || !transactions) return { realSeries: [], simBranches: [] }
 
-        let bal = account.initial_balance
-        const points = [{ date: account.created_at, balance: bal, tx: null, isForecast: false }]
-        for (const tx of txs) {
+    const realSeries = accounts.map(account => {
+      const txs = transactions
+        .filter(t => t.account_id === account.id && !t.forecast_session_id)
+        .sort((a, b) => new Date(a.date) - new Date(b.date) || a.id - b.id)
+      let bal = account.initial_balance
+      const points = [{ date: account.created_at || new Date().toISOString(), balance: bal, label: 'Solde initial', tx: null }]
+      for (const tx of txs) {
+        bal += tx.type === 'CREDIT' ? tx.amount : -tx.amount
+        points.push({ date: tx.date, balance: bal, label: tx.description || tx.category_name || (tx.type === 'CREDIT' ? 'Credit' : 'Debit'), tx })
+      }
+      return { account, points }
+    })
+
+    const simTxs = transactions.filter(t => t.forecast_session_id)
+    const sessionIds = [...new Set(simTxs.map(t => t.forecast_session_id))]
+    const simBranches = sessionIds.map((sessionId, simIdx) => {
+      const sessionTxs = simTxs.filter(t => t.forecast_session_id === sessionId)
+        .sort((a, b) => new Date(a.date) - new Date(b.date) || a.id - b.id)
+      const accountIds = [...new Set(sessionTxs.map(t => t.account_id))]
+      const branches = accountIds.map(accountId => {
+        const account = accounts.find(a => a.id === accountId)
+        if (!account) return null
+        const realSer = realSeries.find(s => s.account.id === accountId)
+        let bal = realSer ? realSer.points[realSer.points.length - 1].balance : account.initial_balance
+        const points = sessionTxs.filter(t => t.account_id === accountId).map(tx => {
           bal += tx.type === 'CREDIT' ? tx.amount : -tx.amount
-          points.push({ date: tx.date, balance: bal, tx, isForecast: !!tx.forecast_session_id })
-        }
-        return { account, points }
-      })
-      .filter(s => s.points.length >= 1)
+          return { date: tx.date, balance: bal, label: tx.description || tx.category_name || (tx.type === 'CREDIT' ? 'Credit' : 'Debit'), tx }
+        })
+        return { account, points, accountId }
+      }).filter(Boolean)
+      return { sessionId, simIdx, branches }
+    })
+
+    return { realSeries, simBranches }
   }, [transactions, accounts])
 
-  const draw = () => {
-    const canvas = canvasRef.current
-    const container = containerRef.current
-    if (!canvas || !container) return
-
-    const W = container.clientWidth
-    const H = container.clientHeight
-    if (!W || !H) return
-    canvas.width  = W
-    canvas.height = H
-
-    const ctx = canvas.getContext('2d')
-    ctx.clearRect(0, 0, W, H)
-
-    if (!series.length) return
-
-    const allPoints = series.flatMap(s => s.points)
-    const dates    = allPoints.map(p => new Date(p.date).getTime())
-    const balances = allPoints.map(p => p.balance)
-    const minDate  = Math.min(...dates)
-    const maxDate  = Math.max(...dates)
-    const minBal   = Math.min(...balances)
-    const maxBal   = Math.max(...balances)
-    const dateRng  = maxDate - minDate || 1
-    const balRng   = maxBal  - minBal  || 1
-
-    const plotW = W - PAD.left - PAD.right
-    const plotH = H - PAD.top  - PAD.bottom
-
-    const xOf = d => PAD.left + ((new Date(d).getTime() - minDate) / dateRng) * plotW
-    const yOf = b => PAD.top  + plotH - ((b - minBal) / balRng) * plotH
-
-    // Axes
-    ctx.strokeStyle = '#374151'
-    ctx.lineWidth   = 1
-    ctx.setLineDash([])
-    ctx.beginPath()
-    ctx.moveTo(PAD.left, PAD.top)
-    ctx.lineTo(PAD.left, H - PAD.bottom)
-    ctx.lineTo(W - PAD.right, H - PAD.bottom)
-    ctx.stroke()
-
-    // Y grid + labels
-    ctx.font      = '11px system-ui, sans-serif'
-    ctx.textAlign = 'right'
-    for (let i = 0; i <= 4; i++) {
-      const b = minBal + balRng * (i / 4)
-      const y = yOf(b)
-      ctx.fillStyle   = '#4B5563'
-      ctx.fillText(Math.round(b).toLocaleString('fr-FR'), PAD.left - 8, y + 4)
-      ctx.strokeStyle = '#1F2937'
-      ctx.lineWidth   = 1
-      ctx.setLineDash([3, 4])
-      ctx.beginPath()
-      ctx.moveTo(PAD.left, y)
-      ctx.lineTo(W - PAD.right, y)
-      ctx.stroke()
-    }
-    ctx.setLineDash([])
-
-    // X labels
-    ctx.fillStyle = '#4B5563'
-    ctx.textAlign = 'center'
-    const d0 = new Date(minDate).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
-    const d1 = new Date(maxDate).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
-    ctx.fillText(d0, PAD.left, H - PAD.bottom + 18)
-    ctx.fillText(d1, W - PAD.right, H - PAD.bottom + 18)
-
-    // Series
-    nodesRef.current = []
-
-    for (const { account, points } of series) {
-      const color = account.color || '#3B82F6'
-
-      if (graphMode === 'parcours' && points.length > 1) {
-        for (let i = 1; i < points.length; i++) {
-          const prev = points[i - 1]
-          const curr = points[i]
-          ctx.beginPath()
-          ctx.strokeStyle = color
-          ctx.lineWidth   = 2
-          ctx.setLineDash(curr.isForecast ? [6, 4] : [])
-          ctx.moveTo(xOf(prev.date), yOf(prev.balance))
-          ctx.lineTo(xOf(curr.date), yOf(curr.balance))
-          ctx.stroke()
-        }
-        ctx.setLineDash([])
-      }
-
-      for (const p of points) {
-        const x = xOf(p.date)
-        const y = yOf(p.balance)
-        ctx.beginPath()
-        ctx.arc(x, y, NODE_R, 0, Math.PI * 2)
-        if (p.isForecast) {
-          ctx.strokeStyle = color
-          ctx.lineWidth   = 2
-          ctx.fillStyle   = '#030712'
-          ctx.fill()
-          ctx.stroke()
-        } else {
-          ctx.fillStyle   = color
-          ctx.strokeStyle = '#030712'
-          ctx.lineWidth   = 1.5
-          ctx.fill()
-          ctx.stroke()
-        }
-        nodesRef.current.push({ x, y, account, point: p })
-      }
-    }
-
-    // Legend
-    let lx = PAD.left
-    const ly = H - PAD.bottom + 30
-    ctx.textAlign = 'left'
-    for (const { account } of series) {
-      ctx.fillStyle = account.color || '#3B82F6'
-      ctx.beginPath()
-      ctx.arc(lx + 6, ly - 3, 5, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.fillStyle = '#9CA3AF'
-      ctx.fillText(account.name, lx + 14, ly)
-      lx += ctx.measureText(account.name).width + 28
-    }
-  }
-
-  useEffect(() => { draw() }, [series, graphMode])
-
   useEffect(() => {
-    const obs = new ResizeObserver(() => draw())
-    if (containerRef.current) obs.observe(containerRef.current)
-    return () => obs.disconnect()
-  }, [series, graphMode])
+    const canvas = canvasRef.current
+    if (!canvas || !realSeries.length) return
+    const ctx = canvas.getContext('2d')
+    nodesRef.current = []
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    if (layout === 'horizontal') {
+      drawHorizontal(ctx, canvas, realSeries, simBranches, nodesRef)
+    } else {
+      drawVertical(ctx, canvas, realSeries, simBranches, nodesRef)
+    }
+  }, [realSeries, simBranches, layout])
 
   const onMouseMove = e => {
     const canvas = canvasRef.current
@@ -169,47 +351,35 @@ export function GraphView({ transactions, accounts, graphMode }) {
     const rect = canvas.getBoundingClientRect()
     const mx = e.clientX - rect.left
     const my = e.clientY - rect.top
-    let best = null
-    let bestD = 16
+    let hit = null
     for (const n of nodesRef.current) {
-      const d = Math.hypot(n.x - mx, n.y - my)
-      if (d < bestD) { bestD = d; best = n }
+      const dx = (mx - n.cx) / n.rx
+      const dy = (my - n.cy) / n.ry
+      if (dx * dx + dy * dy <= 1) { hit = n; break }
     }
-    setTooltip(best ? { ...best, cx: mx, cy: my } : null)
+    setTooltip(hit ? { ...hit, px: e.clientX, py: e.clientY } : null)
   }
 
+  if (!realSeries.length)
+    return <div className="flex items-center justify-center h-full text-gray-600 text-sm">Aucune donnee a afficher</div>
+
   return (
-    <div ref={containerRef} className="relative w-full h-full">
-      <canvas
-        ref={canvasRef}
-        className="w-full h-full"
-        style={{ cursor: 'crosshair' }}
-        onMouseMove={onMouseMove}
-        onMouseLeave={() => setTooltip(null)}
-      />
-      {!series.length && (
-        <div className="absolute inset-0 flex items-center justify-center text-gray-600 text-sm">
-          Aucune donnee a afficher
-        </div>
-      )}
+    <div ref={scrollRef} className="w-full h-full overflow-auto bg-gray-950">
+      <canvas ref={canvasRef} style={{ display: 'block' }} onMouseMove={onMouseMove} onMouseLeave={() => setTooltip(null)} />
       {tooltip && (
-        <div
-          className="absolute pointer-events-none bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs shadow-xl z-10"
-          style={{ left: tooltip.cx + 14, top: Math.max(4, tooltip.cy - 50), minWidth: 160 }}
-        >
-          <p className="font-semibold mb-1" style={{ color: tooltip.account.color }}>
-            {tooltip.account.name}
+        <div className="fixed pointer-events-none bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs shadow-xl z-50"
+          style={{ left: tooltip.px + 14, top: tooltip.py - 60, minWidth: 160 }}>
+          <p className="font-semibold mb-1" style={{ color: tooltip.simColor || tooltip.account.color }}>
+            {tooltip.account.name}{tooltip.simColor ? ' (simulation)' : ''}
           </p>
           <p className="text-gray-400">{fmtDate(tooltip.point.date)}</p>
+          <p className="text-gray-300 mt-0.5">{tooltip.point.label}</p>
           {tooltip.point.tx && (
-            <p className="text-gray-300 mt-0.5">
-              {tooltip.point.tx.description || tooltip.point.tx.category_name || '—'}
+            <p className={`mt-0.5 font-mono ${tooltip.point.tx.type === 'CREDIT' ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {tooltip.point.tx.type === 'CREDIT' ? '+' : '-'}{fmt(tooltip.point.tx.amount)}
             </p>
           )}
           <p className="font-bold text-gray-100 mt-1">{fmt(tooltip.point.balance)}</p>
-          {tooltip.point.isForecast && (
-            <p className="text-amber-400 mt-0.5">Previsionnel</p>
-          )}
         </div>
       )}
     </div>

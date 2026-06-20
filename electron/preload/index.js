@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('api', {
     addTransaction:  (d)      => invoke('forecast:addTransaction', d),
     validateSession: (id)     => invoke('forecast:validateSession', id),
     deleteSession:   (id)     => invoke('forecast:deleteSession', id),
+    addTransfer:      (d)      => invoke('forecast:addTransfer', d),
   },
   stats: {
     getSummary:           ()  => invoke('stats:getSummary'),

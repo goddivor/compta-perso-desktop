@@ -1,10 +1,16 @@
+import { useRef, useEffect } from 'react'
 import { fmt, fmtDate } from '../utils/format'
 import { Badge } from './ui/Badge'
-import { Button } from './ui/Button'
 import { Spinner, Empty } from './ui/Spinner'
 import { Edit2, Trash2, Link } from 'lucide-react'
 
 export function TableView({ transactions, loading, onEdit, onDelete }) {
+  const bottomRef = useRef()
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'instant' })
+  }, [transactions])
+
   if (loading) return <Spinner />
   if (!transactions?.length) return <Empty label="Aucune transaction" />
 
@@ -91,6 +97,7 @@ export function TableView({ transactions, loading, onEdit, onDelete }) {
           })}
         </tbody>
       </table>
+      <div ref={bottomRef} />
     </div>
   )
 }

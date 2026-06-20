@@ -13,6 +13,8 @@ export function getDb() {
     db.pragma('journal_mode = WAL')
     db.pragma('foreign_keys = ON')
     initSchema()
+    // Migration: fees column
+    try { db.exec('ALTER TABLE transactions ADD COLUMN fees REAL DEFAULT 0') } catch (_) {}
     seedDefaults()
   }
   return db

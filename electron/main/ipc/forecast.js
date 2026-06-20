@@ -68,4 +68,20 @@ export function registerForecastHandlers() {
     db.prepare('DELETE FROM forecast_sessions WHERE id=?').run(id)
     return { success: true }
   })
+
+  ipcMain.handle('forecast:addTransfer', (_, { session_id, from_account_id, to_account_id, amount, fees, date, description }) => {
+    const db = getDb()
+    const totalDebit = amount + (fees || 0)
+    return db.transaction(() => {
+      const r1 = db.prepare(
+        "INSERT INTO transactions (account_id,date,type,amount,fees,description,forecast_session_id) VALUES (?,?,'DEBIT',?,?,?,?)"
+      ).run(from_account_id, date, totalDebit, fees || 0, description || null, session_id)
+      const r2 = db.prepare(
+        "INSERT INTO transactions (account_id,date,type,amount,fees,description,forecast_session_id) VALUES (?,?,'CREDIT',?,?,?,?)"
+      ).run(to_account_id, date, amount, 0, description || null, session_id)
+      db.prepare('UPDATE transactions SET transfer_pair_id=? WHERE id=?').run(r2.lastInsertRowid, r1.lastInsertRowid)
+      db.prepare('UPDATE transactions SET transfer_pair_id=? WHERE id=?').run(r1.lastInsertRowid, r2.lastInsertRowid)
+      return { from_tx_id: r1.lastInsertRowid, to_tx_id: r2.lastInsertRowid }
+    })()
+  })
 }
