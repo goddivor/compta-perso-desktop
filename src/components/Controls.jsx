@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Select, Input } from './ui/Field'
 import { Button } from './ui/Button'
-import { Plus, ArrowLeftRight, TrendingUp, Table2, GitBranch, SlidersHorizontal, X, AlignStartVertical, AlignStartHorizontal, CalendarDays } from 'lucide-react'
+import { Plus, ArrowLeftRight, TrendingUp, Table2, GitBranch, SlidersHorizontal, X, AlignStartVertical, AlignStartHorizontal, CalendarDays, Percent } from 'lucide-react'
 
 const hasActiveFilters = f => f.type || f.category_id || f.date_from || f.date_to
 
@@ -10,8 +10,8 @@ export function Controls({
   showForecast, setShowForecast,
   viewMode, setViewMode,
   graphLayout, setGraphLayout,
-  categories,
-  onAddTx, onTransfer, onForecast,
+  categories, accounts,
+  onAddTx, onTransfer, onForecast, onFeeRule,
 }) {
   const [showFilters, setShowFilters] = useState(false)
   const active = hasActiveFilters(filters)
@@ -73,6 +73,26 @@ export function Controls({
             Effacer
           </button>
         )}
+
+        {/* Bouton règle de frais — visible uniquement si un compte est sélectionné */}
+        {filters.account_id && (() => {
+          const acct = (accounts || []).find(a => String(a.id) === String(filters.account_id))
+          const hasRule = acct?.fees_rate != null
+          return (
+            <button
+              onClick={() => onFeeRule?.(acct)}
+              title={hasRule ? `Règle de frais : ${acct.fees_rate}%` : 'Définir une règle de frais'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                hasRule
+                  ? 'border-amber-500/50 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20'
+                  : 'border-edge text-gray-500 hover:text-gray-300 hover:border-gray-600'
+              }`}
+            >
+              <Percent size={12} />
+              {hasRule ? `${acct.fees_rate}%` : 'Frais'}
+            </button>
+          )
+        })()}
 
         <div className="flex-1" />
 

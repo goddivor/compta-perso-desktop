@@ -31,6 +31,8 @@ export function getDb() {
       db.exec('ALTER TABLE accounts ADD COLUMN position INTEGER DEFAULT 0')
       db.exec('UPDATE accounts SET position = id')
     } catch (_) {}
+    // Migration: fees_rate for automatic fee rules per account
+    try { db.exec('ALTER TABLE accounts ADD COLUMN fees_rate REAL DEFAULT NULL') } catch (_) {}
     seedDefaults()
   }
   return db

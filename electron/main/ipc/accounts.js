@@ -25,8 +25,8 @@ export function registerAccountsHandlers() {
 
   ipcMain.handle('accounts:update', (_, { id, ...data }) => {
     getDb().prepare(
-      'UPDATE accounts SET name=@name, provider=@provider, initial_balance=@initial_balance, color=@color WHERE id=@id'
-    ).run({ id, ...data })
+      'UPDATE accounts SET name=@name, provider=@provider, initial_balance=@initial_balance, color=@color, fees_rate=@fees_rate WHERE id=@id'
+    ).run({ fees_rate: null, ...data, id })
     return { id, ...data }
   })
 

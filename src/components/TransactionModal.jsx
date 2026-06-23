@@ -10,8 +10,9 @@ const emptyForm = {
 }
 
 export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, categories, defaultAccountId }) {
-  const [form, setForm]       = useState(emptyForm)
+  const [form, setForm]           = useState(emptyForm)
   const [partnerTx, setPartnerTx] = useState(null)
+  const [applyFeeRule, setApplyFeeRule] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   useEffect(() => {
@@ -51,15 +52,22 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
     } else {
       setForm({ ...emptyForm, account_id: defaultAccountId || accounts?.[0]?.id || '' })
     }
+    setApplyFeeRule(false)
   }, [isOpen])
 
   const filteredCats   = (categories || []).filter(c => c.flow === 'BOTH' || c.flow === form.type)
   const otherAccounts  = (accounts || []).filter(a => String(a.id) !== String(form.account_id))
   const isTransfer     = !!form.linked_account_id
   const baseAmount     = parseFloat(form.amount) || 0
-  const feesAmt        = parseFloat(form.fees)   || 0
-  const totalDebit     = baseAmount + feesAmt
   const wasTransfer    = !!tx?.transfer_pair_id
+
+  const currentAccount = (accounts || []).find(a => String(a.id) === String(form.account_id))
+  const feeRate        = currentAccount?.fees_rate ?? null
+  const autoFees       = (feeRate != null && baseAmount > 0) ? Math.round(baseAmount * feeRate / 100) : 0
+
+  // Quand la case est cochée, les frais sont calculés automatiquement
+  const feesAmt    = applyFeeRule && feeRate != null ? autoFees : (parseFloat(form.fees) || 0)
+  const totalDebit = baseAmount + feesAmt
 
   const sourceAccount  = form.type === 'CREDIT'
     ? otherAccounts.find(a => String(a.id) === String(form.linked_account_id))
@@ -67,7 +75,6 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
   const destAccount    = form.type === 'DEBIT'
     ? otherAccounts.find(a => String(a.id) === String(form.linked_account_id))
     : null
-  const currentAccount = (accounts || []).find(a => String(a.id) === String(form.account_id))
 
   const valid = form.account_id && baseAmount > 0 && form.date
 
@@ -159,10 +166,36 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
           </Field>
         </div>
 
-        {/* Frais */}
-        <Field label={`Frais${isTransfer ? ' de transfert' : ''} (FCFA)`}>
-          <Input type="number" value={form.fees} onChange={e => set('fees', e.target.value)} placeholder="0" min="0" />
-        </Field>
+        {/* Frais + case à cocher règle auto */}
+        <div className="space-y-1.5">
+          <Field label={`Frais${isTransfer ? ' de transfert' : ''} (FCFA)`}>
+            <Input
+              type="number"
+              value={applyFeeRule && feeRate != null ? String(autoFees) : form.fees}
+              onChange={e => { setApplyFeeRule(false); set('fees', e.target.value) }}
+              placeholder="0"
+              min="0"
+              disabled={applyFeeRule && feeRate != null}
+            />
+          </Field>
+          {feeRate != null && (
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <div
+                onClick={() => setApplyFeeRule(v => !v)}
+                className={`w-7 h-3.5 rounded-full transition-colors relative cursor-pointer shrink-0 ${applyFeeRule ? 'bg-amber-500' : 'bg-gray-700'}`}
+              >
+                <span className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white transition-all ${applyFeeRule ? 'left-3.5' : 'left-0.5'}`} />
+              </div>
+              <span className="text-xs text-gray-400">
+                Appliquer la règle de frais{' '}
+                <span className="text-amber-400 font-medium">{feeRate}%</span>
+                {baseAmount > 0 && (
+                  <span className="text-gray-600 ml-1">→ {fmt(autoFees)} FCFA</span>
+                )}
+              </span>
+            </label>
+          )}
+        </div>
 
         {/* Récap total si frais */}
         {feesAmt > 0 && baseAmount > 0 && form.type === 'DEBIT' && !isTransfer && (

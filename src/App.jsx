@@ -9,6 +9,7 @@ import { TransferModal } from './components/TransferModal'
 import { AccountModal } from './components/AccountModal'
 import { ForecastModal } from './components/ForecastModal'
 import { SettingsModal } from './components/SettingsModal'
+import { FeeRuleModal } from './components/FeeRuleModal'
 import { DailyReport } from './components/DailyReport'
 import { Spinner } from './components/ui/Spinner'
 
@@ -79,9 +80,11 @@ export default function App() {
         graphLayout={graphLayout}
         setGraphLayout={setGraphLayout}
         categories={categories}
+        accounts={accounts}
         onAddTx={() => openModal('tx')}
         onTransfer={() => openModal('transfer')}
         onForecast={() => openModal('forecast')}
+        onFeeRule={acct => openModal('feeRule', acct)}
       />
 
       <main className="flex-1 overflow-hidden">
@@ -153,6 +156,14 @@ export default function App() {
           isOpen
           onClose={closeModal}
           onSave={refetch}
+        />
+      )}
+      {modal?.type === 'feeRule' && (
+        <FeeRuleModal
+          isOpen
+          onClose={closeModal}
+          onSave={refetch}
+          account={modal.data}
         />
       )}
     </div>

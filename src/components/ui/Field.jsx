@@ -13,7 +13,8 @@ export function Input({ className = '', ...props }) {
     <input
       {...props}
       className={`bg-gray-800 border border-edge rounded-lg px-3 py-2 text-gray-100 text-sm
-        placeholder-gray-500 focus:outline-none focus:border-blue-500 w-full ${className}`}
+        placeholder-gray-500 focus:outline-none focus:border-blue-500 w-full
+        disabled:opacity-50 disabled:cursor-not-allowed disabled:text-gray-500 ${className}`}
     />
   )
 }
