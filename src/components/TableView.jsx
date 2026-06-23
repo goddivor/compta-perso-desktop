@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react'
 import { fmt, fmtDate } from '../utils/format'
 import { Badge } from './ui/Badge'
 import { Spinner, Empty } from './ui/Spinner'
-import { Edit2, Trash2, Link } from 'lucide-react'
+import { Edit2, Trash2, ArrowLeftRight } from 'lucide-react'
 
 export function TableView({ transactions, loading, onEdit, onDelete }) {
   const bottomRef = useRef()
@@ -43,9 +43,14 @@ export function TableView({ transactions, loading, onEdit, onDelete }) {
                   {fmtDate(tx.date)}
                 </td>
                 <td className="px-3 py-2.5 text-gray-300 max-w-[180px]">
-                  <span className="truncate block">
-                    {tx.description || '—'}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {tx.transfer_pair_id && (
+                      <ArrowLeftRight size={11} className="text-blue-500 shrink-0" />
+                    )}
+                    <span className="truncate block">
+                      {tx.description || '—'}
+                    </span>
+                  </div>
                   {isForecast && (
                     <span className="text-xs text-amber-500 block">
                       {tx.forecast_session_name || 'Previsionnel'}
@@ -73,17 +78,13 @@ export function TableView({ transactions, loading, onEdit, onDelete }) {
                 </td>
                 <td className="px-3 py-2.5">
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
-                    {tx.transfer_pair_id
-                      ? <Link size={12} className="text-gray-600 m-1" />
-                      : (
-                        <button
-                          onClick={() => onEdit(tx)}
-                          className="p-1.5 rounded text-gray-600 hover:text-gray-100 hover:bg-gray-700 transition-colors"
-                        >
-                          <Edit2 size={12} />
-                        </button>
-                      )
-                    }
+                    <button
+                      onClick={() => onEdit(tx)}
+                      className="p-1.5 rounded text-gray-600 hover:text-gray-100 hover:bg-gray-700 transition-colors"
+                      title={tx.transfer_pair_id ? 'Modifier le transfert' : 'Modifier'}
+                    >
+                      <Edit2 size={12} />
+                    </button>
                     <button
                       onClick={() => onDelete(tx.id)}
                       className="p-1.5 rounded text-gray-600 hover:text-rose-400 hover:bg-gray-700 transition-colors"

@@ -53,12 +53,17 @@ export function registerTransactionsHandlers() {
     return { id: r.lastInsertRowid, ...data }
   })
 
+  ipcMain.handle('transactions:getById', (_, id) => {
+    return getDb().prepare('SELECT * FROM transactions WHERE id=?').get(id) || null
+  })
+
   ipcMain.handle('transactions:update', (_, { id, ...data }) => {
     getDb().prepare(`
       UPDATE transactions
-      SET date=@date, type=@type, amount=@amount, category_id=@category_id, description=@description
+      SET account_id=@account_id, date=@date, type=@type, amount=@amount, fees=@fees,
+          category_id=@category_id, description=@description
       WHERE id=@id
-    `).run({ id, ...data })
+    `).run({ fees: 0, category_id: null, ...data, id })
     return { id, ...data }
   })
 

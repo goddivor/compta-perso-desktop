@@ -11,13 +11,16 @@ contextBridge.exposeInMainWorld('api', {
     reorder: (ids)  => invoke('accounts:reorder', ids),
   },
   transactions: {
-    getAll:  (f)    => invoke('transactions:getAll', f),
-    create:  (d)    => invoke('transactions:create', d),
-    update:  (d)    => invoke('transactions:update', d),
-    remove:  (id)   => invoke('transactions:remove', id),
+    getAll:          (f)  => invoke('transactions:getAll', f),
+    getById:         (id) => invoke('transactions:getById', id),
+    create:          (d)  => invoke('transactions:create', d),
+    update:          (d)  => invoke('transactions:update', d),
+    remove:          (id) => invoke('transactions:remove', id),
   },
   transfers: {
-    create:  (d)    => invoke('transfers:create', d),
+    create:          (d) => invoke('transfers:create', d),
+    update:          (d) => invoke('transfers:update', d),
+    convertToSimple: (d) => invoke('transfers:convertToSimple', d),
   },
   categories: {
     getAll:  ()     => invoke('categories:getAll'),
