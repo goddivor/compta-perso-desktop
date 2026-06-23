@@ -55,7 +55,7 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
     setApplyFeeRule(false)
   }, [isOpen])
 
-  const filteredCats   = (categories || []).filter(c => c.flow === 'BOTH' || c.flow === form.type)
+  const filteredCats   = categories || []
   const otherAccounts  = (accounts || []).filter(a => String(a.id) !== String(form.account_id))
   const isTransfer     = !!form.linked_account_id
   const baseAmount     = parseFloat(form.amount) || 0
