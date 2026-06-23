@@ -18,14 +18,14 @@ export function registerTransfersHandlers() {
     })()
   })
 
-  ipcMain.handle('transfers:update', (_, { debit_tx_id, credit_tx_id, from_account_id, to_account_id, amount, fees, date, description }) => {
+  ipcMain.handle('transfers:update', (_, { debit_tx_id, credit_tx_id, from_account_id, to_account_id, amount, fees, date, description, category_id_debit, category_id_credit }) => {
     const db = getDb()
     db.transaction(() => {
       const totalDebit = amount + (fees || 0)
-      db.prepare('UPDATE transactions SET account_id=?,date=?,amount=?,fees=?,description=? WHERE id=?')
-        .run(from_account_id, date, totalDebit, fees || 0, description || null, debit_tx_id)
-      db.prepare('UPDATE transactions SET account_id=?,date=?,amount=?,fees=0,description=? WHERE id=?')
-        .run(to_account_id, date, amount, description || 'Retrait reçu', credit_tx_id)
+      db.prepare('UPDATE transactions SET account_id=?,date=?,amount=?,fees=?,category_id=?,description=? WHERE id=?')
+        .run(from_account_id, date, totalDebit, fees || 0, category_id_debit || null, description || null, debit_tx_id)
+      db.prepare('UPDATE transactions SET account_id=?,date=?,amount=?,fees=0,category_id=?,description=? WHERE id=?')
+        .run(to_account_id, date, amount, category_id_credit || null, description || 'Retrait reçu', credit_tx_id)
     })()
     return { success: true }
   })

@@ -30,7 +30,7 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
             type:              tx.type,
             amount:            String(creditTx.amount),
             fees:              (debitTx.fees || 0) ? String(debitTx.fees) : '',
-            category_id:       '',
+            category_id:       tx.category_id || '',
             date:              (tx.date || today()).slice(0, 10),
             description:       tx.description || '',
             linked_account_id: partner?.account_id ?? '',
@@ -93,7 +93,10 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
         debitTxId = tx.transfer_pair_id; creditTxId = tx.id
         fromAccountId = Number(form.linked_account_id); toAccountId = Number(form.account_id)
       }
-      await window.api.transfers.update({ debit_tx_id: debitTxId, credit_tx_id: creditTxId, from_account_id: fromAccountId, to_account_id: toAccountId, amount: baseAmount, fees: feesAmt, date: form.date, description: form.description || null })
+      const catId = form.category_id ? Number(form.category_id) : null
+      const catDebit  = tx.type === 'DEBIT'   ? catId : null
+      const catCredit = tx.type === 'CREDIT'  ? catId : null
+      await window.api.transfers.update({ debit_tx_id: debitTxId, credit_tx_id: creditTxId, from_account_id: fromAccountId, to_account_id: toAccountId, amount: baseAmount, fees: feesAmt, date: form.date, description: form.description || null, category_id_debit: catDebit, category_id_credit: catCredit })
     } else if (wasTransfer && !isNowTransfer) {
       // Transfer → Transaction simple : supprimer le partenaire
       const storedAmount = form.type === 'DEBIT' ? totalDebit : baseAmount
@@ -205,14 +208,12 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
           <Field label="Date">
             <Input type="date" value={form.date} onChange={e => set('date', e.target.value)} />
           </Field>
-          {!isTransfer && (
-            <Field label="Catégorie">
-              <Select value={form.category_id} onChange={e => set('category_id', e.target.value)}>
-                <option value="">— Sans catégorie —</option>
-                {filteredCats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </Select>
-            </Field>
-          )}
+          <Field label="Catégorie">
+            <Select value={form.category_id} onChange={e => set('category_id', e.target.value)}>
+              <option value="">— Sans catégorie —</option>
+              {filteredCats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </Select>
+          </Field>
         </div>
 
         <Field label="Description">
