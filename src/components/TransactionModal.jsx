@@ -63,7 +63,7 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
 
   const currentAccount = (accounts || []).find(a => String(a.id) === String(form.account_id))
   const feeRate        = currentAccount?.fees_rate ?? null
-  const autoFees       = (feeRate != null && baseAmount > 0) ? Math.round(baseAmount * feeRate / 100) : 0
+  const autoFees       = (feeRate != null && baseAmount > 0) ? Math.round(baseAmount * feeRate) : 0
 
   // Quand la case est cochée, les frais sont calculés automatiquement
   const feesAmt    = applyFeeRule && feeRate != null ? autoFees : (parseFloat(form.fees) || 0)

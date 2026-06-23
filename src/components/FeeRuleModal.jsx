@@ -15,7 +15,7 @@ export function FeeRuleModal({ isOpen, onClose, onSave, account }) {
 
   const rateNum   = parseFloat(rate)
   const hasRate   = !isNaN(rateNum) && rateNum > 0
-  const example   = hasRate ? Math.round(10000 * rateNum / 100) : null
+  const example   = hasRate ? Math.round(10000 * rateNum) : null
 
   const save = async () => {
     await window.api.accounts.update({
@@ -53,15 +53,15 @@ export function FeeRuleModal({ isOpen, onClose, onSave, account }) {
           une case à cocher vous proposera d'appliquer les frais calculés.
         </p>
 
-        <Field label="Taux de frais (%)">
+        <Field label="Taux de frais (ex : 0.01 pour 1%)">
           <div className="relative">
             <Input
               type="number"
               value={rate}
               onChange={e => setRate(e.target.value)}
-              placeholder="ex : 0.5"
+              placeholder="ex : 0.01"
               min="0"
-              step="0.01"
+              step="0.001"
             />
             <Percent size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
           </div>
@@ -71,18 +71,18 @@ export function FeeRuleModal({ isOpen, onClose, onSave, account }) {
           <div className="bg-gray-800 rounded-lg px-4 py-3 text-sm space-y-1">
             <p className="text-gray-400">
               Pour <span className="text-gray-200 font-medium">10 000 FCFA</span>
-              {' '}→ frais = <span className="text-rose-400 font-medium">{fmt(example)} FCFA</span>
+              {' '}→ frais = <span className="text-rose-400 font-medium">{fmt(example)}</span>
             </p>
             <p className="text-gray-400">
               Pour <span className="text-gray-200 font-medium">50 000 FCFA</span>
-              {' '}→ frais = <span className="text-rose-400 font-medium">{fmt(Math.round(50000 * rateNum / 100))} FCFA</span>
+              {' '}→ frais = <span className="text-rose-400 font-medium">{fmt(Math.round(50000 * rateNum))}</span>
             </p>
           </div>
         )}
 
         {!hasRate && account.fees_rate != null && (
           <p className="text-xs text-amber-500">
-            Règle actuelle ({account.fees_rate}%) — laisser vide pour supprimer.
+            Règle actuelle ({account.fees_rate}) — laisser vide pour supprimer.
           </p>
         )}
 
