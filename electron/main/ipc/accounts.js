@@ -11,7 +11,7 @@ export function registerAccountsHandlers() {
           0
         ) AS current_balance
       FROM accounts a
-      ORDER BY type, name
+      ORDER BY position, id
     `).all()
   })
 
@@ -32,6 +32,13 @@ export function registerAccountsHandlers() {
 
   ipcMain.handle('accounts:remove', (_, id) => {
     getDb().prepare('DELETE FROM accounts WHERE id=?').run(id)
+    return { success: true }
+  })
+
+  ipcMain.handle('accounts:reorder', (_, ids) => {
+    const db = getDb()
+    const stmt = db.prepare('UPDATE accounts SET position=? WHERE id=?')
+    db.transaction(() => { ids.forEach((id, i) => stmt.run(i, id)) })()
     return { success: true }
   })
 }

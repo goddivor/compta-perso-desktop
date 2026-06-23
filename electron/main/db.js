@@ -26,6 +26,11 @@ export function getDb() {
     initSchema()
     // Migration: fees column
     try { db.exec('ALTER TABLE transactions ADD COLUMN fees REAL DEFAULT 0') } catch (_) {}
+    // Migration: position column for accounts reordering
+    try {
+      db.exec('ALTER TABLE accounts ADD COLUMN position INTEGER DEFAULT 0')
+      db.exec('UPDATE accounts SET position = id')
+    } catch (_) {}
     seedDefaults()
   }
   return db
