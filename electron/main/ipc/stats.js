@@ -67,6 +67,28 @@ export function registerStatsHandlers() {
     `).all(...params)
   })
 
+  ipcMain.handle('stats:getDailyReport', (_, { account_id, date_from, date_to } = {}) => {
+    const db = getDb()
+    const where = ['t.forecast_session_id IS NULL']
+    const params = []
+    if (account_id) { where.push('t.account_id=?'); params.push(account_id) }
+    if (date_from)  { where.push("date(t.date)>=?"); params.push(date_from) }
+    if (date_to)    { where.push("date(t.date)<=?"); params.push(date_to) }
+
+    return db.prepare(`
+      SELECT
+        date(t.date)                                                          AS day,
+        SUM(CASE WHEN t.type='CREDIT' THEN t.amount ELSE 0 END)              AS total_credit,
+        SUM(CASE WHEN t.type='DEBIT'  THEN t.amount ELSE 0 END)              AS total_debit,
+        SUM(CASE WHEN t.type='CREDIT' THEN t.amount ELSE -t.amount END)      AS net,
+        COUNT(*)                                                              AS tx_count
+      FROM transactions t
+      WHERE ${where.join(' AND ')}
+      GROUP BY date(t.date)
+      ORDER BY day DESC
+    `).all(...params)
+  })
+
   ipcMain.handle('stats:getMonthlyFlow', (_, { account_id } = {}) => {
     const db = getDb()
     const where = ['t.forecast_session_id IS NULL']

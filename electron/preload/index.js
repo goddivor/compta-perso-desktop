@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('api', {
     create:  (d)    => invoke('accounts:create', d),
     update:  (d)    => invoke('accounts:update', d),
     remove:  (id)   => invoke('accounts:remove', id),
+    reorder: (ids)  => invoke('accounts:reorder', ids),
   },
   transactions: {
     getAll:  (f)    => invoke('transactions:getAll', f),
@@ -35,6 +36,7 @@ contextBridge.exposeInMainWorld('api', {
   },
   stats: {
     getSummary:           ()  => invoke('stats:getSummary'),
+    getDailyReport:       (p) => invoke('stats:getDailyReport', p),
     getBalanceHistory:    (p) => invoke('stats:getBalanceHistory', p),
     getExpensesByCategory:(p) => invoke('stats:getExpensesByCategory', p),
     getMonthlyFlow:       (p) => invoke('stats:getMonthlyFlow', p),

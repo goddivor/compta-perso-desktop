@@ -9,6 +9,7 @@ import { TransferModal } from './components/TransferModal'
 import { AccountModal } from './components/AccountModal'
 import { ForecastModal } from './components/ForecastModal'
 import { SettingsModal } from './components/SettingsModal'
+import { DailyReport } from './components/DailyReport'
 import { Spinner } from './components/ui/Spinner'
 
 const emptyFilters = { account_id: '', type: '', category_id: '', date_from: '', date_to: '' }
@@ -65,6 +66,7 @@ export default function App() {
         onSelectAccount={id => setF('account_id', id === '' ? '' : String(id))}
         onAddAccount={() => openModal('account')}
         onSettings={() => openModal('settings')}
+        onReorder={refetch}
       />
 
       <Controls
@@ -83,7 +85,9 @@ export default function App() {
       />
 
       <main className="flex-1 overflow-hidden">
-        {viewMode === 'tableau' ? (
+        {viewMode === 'rapport' ? (
+          <DailyReport filters={filters} tick={tick} />
+        ) : viewMode === 'tableau' ? (
           loadingTx
             ? <div className="flex items-center justify-center h-full"><Spinner /></div>
             : (

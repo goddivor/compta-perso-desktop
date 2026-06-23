@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Select, Input } from './ui/Field'
 import { Button } from './ui/Button'
-import { Plus, ArrowLeftRight, TrendingUp, Table2, GitBranch, SlidersHorizontal, X, AlignStartVertical, AlignStartHorizontal } from 'lucide-react'
+import { Plus, ArrowLeftRight, TrendingUp, Table2, GitBranch, SlidersHorizontal, X, AlignStartVertical, AlignStartHorizontal, CalendarDays } from 'lucide-react'
 
 const hasActiveFilters = f => f.type || f.category_id || f.date_from || f.date_to
 
@@ -132,6 +132,15 @@ export function Controls({
           >
             <GitBranch size={13} />
             Graphe
+          </button>
+          <button
+            onClick={() => setViewMode('rapport')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+              viewMode === 'rapport' ? 'bg-gray-700 text-gray-100' : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            <CalendarDays size={13} />
+            Rapport
           </button>
         </div>
       </div>
