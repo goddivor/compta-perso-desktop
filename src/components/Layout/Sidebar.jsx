@@ -11,8 +11,8 @@ const links = [
 
 export function Sidebar() {
   return (
-    <aside className="w-56 shrink-0 bg-gray-900 border-r border-gray-800 flex flex-col h-screen">
-      <div className="px-5 py-5 border-b border-gray-800">
+    <aside className="w-56 shrink-0 bg-surface border-r border-edge flex flex-col h-screen">
+      <div className="px-5 py-5 border-b border-edge">
         <div className="flex items-center gap-2">
           <span className="text-xl">💰</span>
           <span className="font-bold text-gray-100 text-sm">Compta Perso</span>
@@ -38,7 +38,7 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="border-t border-gray-800">
+      <div className="border-t border-edge">
         <NavLink
           to="/settings"
           className={({ isActive }) =>

@@ -81,6 +81,7 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={tx ? 'Modifier la transaction' : 'Nouvelle transaction'}>
       <div className="space-y-4">
+        {/* Ligne 1 : Compte + Source/Destination */}
         <div className="grid grid-cols-2 gap-3">
           <Field label="Compte">
             <Select value={form.account_id} onChange={e => set('account_id', e.target.value)}>
@@ -90,36 +91,36 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
               ))}
             </Select>
           </Field>
+          {!tx && form.account_id ? (
+            <Field label={form.type === 'CREDIT' ? 'Source (compte)' : 'Destination (compte)'}>
+              <Select value={form.linked_account_id} onChange={e => set('linked_account_id', e.target.value)}>
+                <option value="">Externe / Aucune</option>
+                {otherAccounts.map(a => (
+                  <option key={a.id} value={a.id}>{a.name}{a.provider ? ` (${a.provider})` : ''}</option>
+                ))}
+              </Select>
+            </Field>
+          ) : <div />}
+        </div>
+
+        {/* Ligne 2 : Type + Montant (+ Frais si transfer) */}
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Type">
             <Select value={form.type} onChange={e => { set('type', e.target.value); set('linked_account_id', '') }}>
               <option value="DEBIT">Debit (depense)</option>
               <option value="CREDIT">Credit (entree)</option>
             </Select>
           </Field>
-        </div>
-
-        {/* Source / Destination */}
-        {!tx && form.account_id && (
-          <Field label={form.type === 'CREDIT' ? 'Source (compte)' : 'Destination (compte)'}>
-            <Select value={form.linked_account_id} onChange={e => set('linked_account_id', e.target.value)}>
-              <option value="">Externe / Aucune</option>
-              {otherAccounts.map(a => (
-                <option key={a.id} value={a.id}>{a.name}{a.provider ? ` (${a.provider})` : ''}</option>
-              ))}
-            </Select>
-          </Field>
-        )}
-
-        <div className="grid grid-cols-2 gap-3">
           <Field label="Montant (FCFA)">
             <Input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="0" min="0" />
           </Field>
-          {isTransfer && (
-            <Field label="Frais de transfert (FCFA)">
-              <Input type="number" value={form.fees} onChange={e => set('fees', e.target.value)} placeholder="0" min="0" />
-            </Field>
-          )}
         </div>
+
+        {isTransfer && (
+          <Field label="Frais de transfert (FCFA)">
+            <Input type="number" value={form.fees} onChange={e => set('fees', e.target.value)} placeholder="0" min="0" className="w-full" />
+          </Field>
+        )}
 
         {/* Preview transfer amounts */}
         {isTransfer && amount > 0 && (
@@ -171,9 +172,9 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
           <Textarea rows={2} value={form.description} onChange={e => set('description', e.target.value)} placeholder="Optionnel..." />
         </Field>
 
-        <div className="flex justify-end gap-2 pt-1">
-          <Button variant="secondary" onClick={onClose}>Annuler</Button>
-          <Button onClick={save} disabled={!valid}>
+        <div className="flex gap-2 pt-1">
+          <Button variant="secondary" onClick={onClose} className="flex-1">Annuler</Button>
+          <Button onClick={save} disabled={!valid} className="flex-1">
             {isTransfer ? 'Creer le transfert' : 'Enregistrer'}
           </Button>
         </div>

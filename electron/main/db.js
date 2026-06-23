@@ -1,15 +1,26 @@
 import Database from 'better-sqlite3'
 import { join } from 'path'
-import { existsSync, mkdirSync } from 'fs'
+import { existsSync, mkdirSync, copyFileSync } from 'fs'
+import { app } from 'electron'
 
 let db
 
+function resolveDbPath() {
+  // Dev et prod utilisent la même base : ~/.config/compta-perso/data/compta.db
+  const userDataDir = join(app.getPath('userData'), 'data')
+  if (!existsSync(userDataDir)) mkdirSync(userDataDir, { recursive: true })
+  const dbDest = join(userDataDir, 'compta.db')
+  // En production uniquement : copie la base bundlée au premier lancement
+  if (app.isPackaged && !existsSync(dbDest)) {
+    const bundled = join(process.resourcesPath, 'data', 'compta.db')
+    if (existsSync(bundled)) copyFileSync(bundled, dbDest)
+  }
+  return dbDest
+}
+
 export function getDb() {
   if (!db) {
-    const dataDir = join(process.cwd(), 'data')
-    if (!existsSync(dataDir)) mkdirSync(dataDir, { recursive: true })
-
-    db = new Database(join(dataDir, 'compta.db'))
+    db = new Database(resolveDbPath())
     db.pragma('journal_mode = WAL')
     db.pragma('foreign_keys = ON')
     initSchema()

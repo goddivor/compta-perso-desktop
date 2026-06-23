@@ -6,12 +6,12 @@ export function BalanceCards({ summary, selectedAccount, onSelectAccount, onAddA
   const total    = (summary?.total_electronic ?? 0) + (summary?.total_physical ?? 0)
 
   return (
-    <div className="shrink-0 border-b border-gray-800 bg-gray-900">
+    <div className="shrink-0 border-b border-edge bg-surface">
       <div className="flex items-stretch gap-0 overflow-x-auto">
         {/* Total */}
         <button
           onClick={() => onSelectAccount('')}
-          className={`shrink-0 flex flex-col px-5 py-4 border-r border-gray-800 transition-colors text-left ${
+          className={`shrink-0 flex flex-col px-5 py-4 border-r border-edge transition-colors text-left ${
             !selectedAccount ? 'bg-blue-600/10 border-b-2 border-b-blue-500' : 'hover:bg-gray-800/50'
           }`}
         >
@@ -24,7 +24,7 @@ export function BalanceCards({ summary, selectedAccount, onSelectAccount, onAddA
           <button
             key={a.id}
             onClick={() => onSelectAccount(selectedAccount === a.id ? '' : a.id)}
-            className={`shrink-0 flex flex-col px-5 py-4 border-r border-gray-800 transition-colors text-left ${
+            className={`shrink-0 flex flex-col px-5 py-4 border-r border-edge transition-colors text-left ${
               selectedAccount === a.id
                 ? 'bg-gray-800 border-b-2'
                 : 'hover:bg-gray-800/50'
@@ -48,7 +48,7 @@ export function BalanceCards({ summary, selectedAccount, onSelectAccount, onAddA
         {/* Add account */}
         <button
           onClick={onAddAccount}
-          className="shrink-0 flex items-center gap-1.5 px-4 py-4 text-gray-600 hover:text-gray-300 hover:bg-gray-800/50 transition-colors border-r border-gray-800"
+          className="shrink-0 flex items-center gap-1.5 px-4 py-4 text-gray-600 hover:text-gray-300 hover:bg-gray-800/50 transition-colors border-r border-edge"
         >
           <Plus size={14} />
           <span className="text-xs">Compte</span>

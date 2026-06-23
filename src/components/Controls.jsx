@@ -24,7 +24,7 @@ export function Controls({
   }
 
   return (
-    <div className="shrink-0 border-b border-gray-800 bg-gray-950">
+    <div className="shrink-0 border-b border-edge bg-base">
       {/* Barre principale — une seule ligne */}
       <div className="flex items-center gap-3 px-4 py-2">
         <div className="flex items-center gap-2">
@@ -52,7 +52,7 @@ export function Controls({
               ? 'border-blue-500 text-blue-400 bg-blue-500/10 hover:bg-blue-500/20'
               : showFilters
               ? 'border-gray-600 text-gray-200 bg-gray-800'
-              : 'border-gray-700 text-gray-500 hover:text-gray-300 hover:border-gray-600'
+              : 'border-edge text-gray-500 hover:text-gray-300 hover:border-gray-600'
           }`}
         >
           <SlidersHorizontal size={13} />
@@ -138,11 +138,11 @@ export function Controls({
 
       {/* Panneau filtres — apparait sous la barre */}
       {showFilters && (
-        <div className="flex items-center gap-3 px-4 pb-2 border-t border-gray-800/60 pt-2">
+        <div className="flex items-center gap-3 px-4 pb-2 border-t border-edge/60 pt-2">
           <select
             value={filters.type}
             onChange={e => setF('type', e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-gray-100 text-xs focus:outline-none focus:border-blue-500"
+            className="bg-gray-800 border border-edge rounded-lg px-2 py-1.5 text-gray-100 text-xs focus:outline-none focus:border-blue-500"
           >
             <option value="">Tous types</option>
             <option value="CREDIT">Credit</option>
@@ -152,7 +152,7 @@ export function Controls({
           <select
             value={filters.category_id}
             onChange={e => setF('category_id', e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-gray-100 text-xs focus:outline-none focus:border-blue-500"
+            className="bg-gray-800 border border-edge rounded-lg px-2 py-1.5 text-gray-100 text-xs focus:outline-none focus:border-blue-500"
           >
             <option value="">Toutes categories</option>
             {(categories || []).map(c => (
@@ -165,14 +165,14 @@ export function Controls({
             type="date"
             value={filters.date_from}
             onChange={e => setF('date_from', e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-gray-100 text-xs focus:outline-none focus:border-blue-500"
+            className="bg-gray-800 border border-edge rounded-lg px-2 py-1.5 text-gray-100 text-xs focus:outline-none focus:border-blue-500"
           />
           <span className="text-xs text-gray-600">au</span>
           <input
             type="date"
             value={filters.date_to}
             onChange={e => setF('date_to', e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-gray-100 text-xs focus:outline-none focus:border-blue-500"
+            className="bg-gray-800 border border-edge rounded-lg px-2 py-1.5 text-gray-100 text-xs focus:outline-none focus:border-blue-500"
           />
         </div>
       )}

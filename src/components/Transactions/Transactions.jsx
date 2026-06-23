@@ -45,7 +45,7 @@ export function Transactions() {
         </div>
       </div>
 
-      <div className="bg-gray-900 rounded-xl border border-gray-800 p-4 flex flex-wrap gap-3 items-end">
+      <div className="bg-surface rounded-xl border border-edge p-4 flex flex-wrap gap-3 items-end">
         <Filter size={14} className="text-gray-500 mt-auto mb-1" />
 
         <div className="flex flex-col gap-1">
@@ -88,11 +88,11 @@ export function Transactions() {
         </Button>
       </div>
 
-      <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+      <div className="bg-surface rounded-xl border border-edge overflow-hidden">
         {loading ? <Spinner /> : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-800 text-xs text-gray-500 uppercase">
+              <tr className="border-b border-edge text-xs text-gray-500 uppercase">
                 <th className="px-5 py-3 text-left">Date</th>
                 <th className="px-3 py-3 text-left">Description</th>
                 <th className="px-3 py-3 text-left">Compte</th>
@@ -106,7 +106,7 @@ export function Transactions() {
               {(txs || []).length === 0 ? (
                 <tr><td colSpan={7} className="text-center text-gray-500 py-10">Aucune transaction</td></tr>
               ) : (txs || []).map(tx => (
-                <tr key={tx.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors group">
+                <tr key={tx.id} className="border-b border-edge/50 hover:bg-gray-800/30 transition-colors group">
                   <td className="px-5 py-3 text-gray-400 whitespace-nowrap">{fmtDate(tx.date)}</td>
                   <td className="px-3 py-3 text-gray-300 max-w-[160px] truncate">{tx.description || '—'}</td>
                   <td className="px-3 py-3 text-gray-400 text-xs">{tx.account_name}</td>

@@ -29,7 +29,7 @@ function AddTxRow({ sessionId, accounts, categories, onAdded }) {
   }
 
   return (
-    <div className="bg-gray-800/50 rounded-lg p-3 flex flex-wrap gap-2 items-end border border-gray-700 border-dashed">
+    <div className="bg-gray-800/50 rounded-lg p-3 flex flex-wrap gap-2 items-end border border-edge border-dashed">
       <Select value={form.account_id} onChange={e => set('account_id', e.target.value)} className="w-36 text-xs">
         {(accounts || []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
       </Select>
@@ -104,22 +104,22 @@ export function ForecastDetail({ sessionId, onBack, onChanged }) {
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-gray-900 rounded-lg border border-gray-800 p-4">
+        <div className="bg-surface rounded-lg border border-edge p-4">
           <p className="text-xs text-gray-500 mb-1">Bilan prévisionnel</p>
           <p className={`text-xl font-bold ${net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{net >= 0 ? '+' : ''}{fmt(net)}</p>
         </div>
-        <div className="bg-gray-900 rounded-lg border border-gray-800 p-4">
+        <div className="bg-surface rounded-lg border border-edge p-4">
           <p className="text-xs text-gray-500 mb-1">Transactions simulées</p>
           <p className="text-xl font-bold text-gray-100">{transactions?.length || 0}</p>
         </div>
-        <div className="bg-gray-900 rounded-lg border border-gray-800 p-4">
+        <div className="bg-surface rounded-lg border border-edge p-4">
           <p className="text-xs text-gray-500 mb-1">Statut</p>
           <p className="text-sm font-medium mt-1">{isValidated ? '✅ Validée' : '⏳ Simulation'}</p>
         </div>
       </div>
 
       {balances.projected && (
-        <div className="bg-gray-900 rounded-lg border border-gray-800 p-4">
+        <div className="bg-surface rounded-lg border border-edge p-4">
           <p className="text-xs text-gray-500 mb-3">Soldes projetés après simulation</p>
           <div className="grid grid-cols-2 gap-2">
             {(accounts || []).map(a => {
@@ -143,8 +143,8 @@ export function ForecastDetail({ sessionId, onBack, onChanged }) {
         </div>
       )}
 
-      <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-800 text-xs text-gray-500 uppercase font-medium">
+      <div className="bg-surface rounded-xl border border-edge overflow-hidden">
+        <div className="px-5 py-3 border-b border-edge text-xs text-gray-500 uppercase font-medium">
           Transactions simulées
         </div>
         {(transactions || []).length === 0 ? (
@@ -153,7 +153,7 @@ export function ForecastDetail({ sessionId, onBack, onChanged }) {
           <table className="w-full text-sm">
             <tbody>
               {transactions.map(tx => (
-                <tr key={tx.id} className="border-b border-gray-800/50 hover:bg-gray-800/20 group">
+                <tr key={tx.id} className="border-b border-edge/50 hover:bg-gray-800/20 group">
                   <td className="px-5 py-3 text-gray-400">{fmtDate(tx.date)}</td>
                   <td className="px-3 py-3 text-gray-300">{tx.description || '—'}</td>
                   <td className="px-3 py-3 text-xs text-gray-400">{tx.account_name}</td>

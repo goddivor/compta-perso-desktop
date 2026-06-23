@@ -78,9 +78,9 @@ export function TransferModal({ isOpen, onClose, onSave, accounts }) {
           </div>
         )}
 
-        <div className="flex justify-end gap-2 pt-1">
-          <Button variant="secondary" onClick={onClose}>Annuler</Button>
-          <Button onClick={save} disabled={!valid}>Virer</Button>
+        <div className="flex gap-2 pt-1">
+          <Button variant="secondary" onClick={onClose} className="flex-1">Annuler</Button>
+          <Button onClick={save} disabled={!valid} className="flex-1">Virer</Button>
         </div>
       </div>
     </Modal>

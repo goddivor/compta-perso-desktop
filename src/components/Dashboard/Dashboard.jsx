@@ -6,7 +6,7 @@ import { Wallet, CreditCard, TrendingUp, ArrowUpDown } from 'lucide-react'
 
 function StatCard({ icon: Icon, label, value, color }) {
   return (
-    <div className="bg-gray-900 rounded-xl border border-gray-800 p-5 flex items-center gap-4">
+    <div className="bg-surface rounded-xl border border-edge p-5 flex items-center gap-4">
       <div className={`p-3 rounded-lg ${color}`}>
         <Icon size={20} className="text-white" />
       </div>
@@ -39,7 +39,7 @@ export function Dashboard() {
 
       <div className="grid grid-cols-2 gap-4">
         {(summary?.accounts || []).map(a => (
-          <div key={a.id} className="bg-gray-900 rounded-xl border border-gray-800 p-4 flex items-center gap-3">
+          <div key={a.id} className="bg-surface rounded-xl border border-edge p-4 flex items-center gap-3">
             <span
               className="w-3 h-3 rounded-full shrink-0"
               style={{ backgroundColor: a.color }}
@@ -55,8 +55,8 @@ export function Dashboard() {
         ))}
       </div>
 
-      <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-800 flex items-center gap-2">
+      <div className="bg-surface rounded-xl border border-edge overflow-hidden">
+        <div className="px-5 py-4 border-b border-edge flex items-center gap-2">
           <ArrowUpDown size={15} className="text-gray-400" />
           <h2 className="text-sm font-semibold text-gray-200">Transactions récentes</h2>
         </div>
@@ -66,7 +66,7 @@ export function Dashboard() {
           <table className="w-full text-sm">
             <tbody>
               {recent.map(tx => (
-                <tr key={tx.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
+                <tr key={tx.id} className="border-b border-edge/50 hover:bg-gray-800/30 transition-colors">
                   <td className="px-5 py-3 text-gray-400">{fmtDate(tx.date)}</td>
                   <td className="px-3 py-3 text-gray-300">{tx.description || tx.category_name || '—'}</td>
                   <td className="px-3 py-3 text-gray-400 text-xs">{tx.account_name}</td>

@@ -2,19 +2,60 @@
   "name": "compta-perso",
   "version": "1.0.0",
   "description": "Comptabilité personnelle locale",
+  "author": "Divor",
+  "homepage": "https://github.com/divor/compta-perso",
   "main": "out/main/index.js",
   "type": "module",
   "scripts": {
     "dev": "electron-vite dev -- --no-sandbox",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
+    "dist": "electron-vite build && electron-builder",
+    "dist:dir": "electron-vite build && electron-builder --dir",
     "postinstall": "electron-rebuild"
+  },
+  "build": {
+    "appId": "com.divor.compta-perso",
+    "productName": "Compta Perso",
+    "directories": {
+      "buildResources": "resources",
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "node_modules/better-sqlite3/**/*",
+      "!node_modules/**/{test,tests,__tests__,*.test.*}/**"
+    ],
+    "extraResources": [
+      {
+        "from": "data",
+        "to": "data",
+        "filter": ["**/*", "!*.db-shm", "!*.db-wal"]
+      }
+    ],
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Finance",
+      "maintainer": "Divor"
+    },
+    "deb": {
+      "depends": ["libgtk-3-0", "libnotify4", "libnss3", "libxss1", "libxtst6", "xdg-utils", "libatspi2.0-0"]
+    },
+    "win": {
+      "target": ["nsis"],
+      "icon": "resources/icon.ico"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "category": "public.app-category.finance"
+    }
   },
   "devDependencies": {
     "@electron/rebuild": "^3.7.1",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
     "electron": "^33.0.0",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^2.3.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",

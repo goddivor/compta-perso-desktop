@@ -58,7 +58,7 @@ export default function App() {
   const handleSave = () => { refetch(); closeModal() }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-950 text-gray-100 overflow-hidden">
+    <div className="h-screen flex flex-col bg-base text-gray-100 overflow-hidden">
       <BalanceCards
         summary={summary}
         selectedAccount={filters.account_id ? Number(filters.account_id) : null}
@@ -141,6 +141,7 @@ export default function App() {
           onSave={refetch}
           accounts={accounts || []}
           categories={categories || []}
+          defaultAccountId={filters.account_id ? Number(filters.account_id) : undefined}
         />
       )}
       {modal?.type === 'settings' && (

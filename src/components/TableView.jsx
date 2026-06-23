@@ -17,8 +17,8 @@ export function TableView({ transactions, loading, onEdit, onDelete }) {
   return (
     <div className="overflow-auto h-full">
       <table className="w-full text-sm border-collapse">
-        <thead className="sticky top-0 bg-gray-950 z-10">
-          <tr className="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
+        <thead className="sticky top-0 bg-base z-10">
+          <tr className="border-b border-edge text-xs text-gray-500 uppercase tracking-wide">
             <th className="px-4 py-3 text-left">Date</th>
             <th className="px-3 py-3 text-left">Description</th>
             <th className="px-3 py-3 text-left">Compte</th>
@@ -36,10 +36,10 @@ export function TableView({ transactions, loading, onEdit, onDelete }) {
                 className={`border-b group transition-colors ${
                   isForecast
                     ? 'border-amber-900/30 bg-amber-950/10 hover:bg-amber-950/20'
-                    : 'border-gray-800/50 hover:bg-gray-800/20'
+                    : 'border-edge/50 hover:bg-gray-800/20'
                 }`}
               >
-                <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap text-xs">
+                <td className="px-4 py-2.5 text-gray-100 whitespace-nowrap text-xs">
                   {fmtDate(tx.date)}
                 </td>
                 <td className="px-3 py-2.5 text-gray-300 max-w-[180px]">

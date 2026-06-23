@@ -85,10 +85,10 @@ export function Settings() {
         <Button onClick={() => setModal('new')}><Plus size={14} />Nouvelle catégorie</Button>
       </div>
 
-      <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+      <div className="bg-surface rounded-xl border border-edge overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-800 text-xs text-gray-500 uppercase">
+            <tr className="border-b border-edge text-xs text-gray-500 uppercase">
               <th className="px-5 py-3 text-left">Icône</th>
               <th className="px-3 py-3 text-left">Nom</th>
               <th className="px-3 py-3 text-left">Sens</th>
@@ -98,14 +98,14 @@ export function Settings() {
           </thead>
           <tbody>
             {(categories || []).map(c => (
-              <tr key={c.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 group">
+              <tr key={c.id} className="border-b border-edge/50 hover:bg-gray-800/30 group">
                 <td className="px-5 py-3 text-xl">{c.icon}</td>
                 <td className="px-3 py-3 text-gray-200 font-medium">{c.name}</td>
                 <td className="px-3 py-3">
                   <Badge color={flowColor[c.flow]}>{flowLabel[c.flow]}</Badge>
                 </td>
                 <td className="px-5 py-3">
-                  <span className="w-5 h-5 rounded-full inline-block border border-gray-700" style={{ backgroundColor: c.color }} />
+                  <span className="w-5 h-5 rounded-full inline-block border border-edge" style={{ backgroundColor: c.color }} />
                 </td>
                 <td className="px-3 py-3">
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">

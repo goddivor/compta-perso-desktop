@@ -2,14 +2,13 @@ import { useState } from 'react'
 import { useAsync } from '../hooks/useAsync'
 import { Modal } from './ui/Modal'
 import { Button } from './ui/Button'
-import { Input, Select } from './ui/Field'
-import { Badge } from './ui/Badge'
 import { Spinner } from './ui/Spinner'
 import { fmt, fmtDate, today } from '../utils/format'
-import { Plus, ChevronRight, ChevronDown, CheckCircle, Trash2, GitBranch } from 'lucide-react'
+import { Input, Select } from './ui/Field'
+import { Plus, ChevronRight, ChevronDown, CheckCircle, Trash2, GitBranch, Pencil, TrendingUp, TrendingDown } from 'lucide-react'
 
-const emptyTx = (accounts) => ({
-  account_id:        accounts?.[0]?.id || '',
+const emptyTx = (accounts, defaultAccountId) => ({
+  account_id:        defaultAccountId || accounts?.[0]?.id || '',
   type:              'DEBIT',
   amount:            '',
   category_id:       '',
@@ -19,53 +18,137 @@ const emptyTx = (accounts) => ({
   fees:              '',
 })
 
-function SessionDetail({ session, accounts, categories, onChanged }) {
+function TxForm({ form, set, accounts, categories, onSave, onCancel }) {
+  const filteredCats = (categories || []).filter(
+    c => c.flow === 'BOTH' || c.flow === form.type
+  )
+  const isTransfer = !!form.linked_account_id
+  const otherAccounts = (accounts || []).filter(a => String(a.id) !== String(form.account_id))
+
+  return (
+    <div className="bg-surface rounded-xl border border-edge p-4 space-y-3 mt-2">
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+        {form._id ? 'Modifier la transaction' : 'Nouvelle transaction'}
+      </p>
+
+      {/* Ligne 1 : Compte + Source/Dest */}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Compte</label>
+          <Select value={form.account_id} onChange={e => set('account_id', e.target.value)}>
+            {(accounts || []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </Select>
+        </div>
+        {!form._id ? (
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">
+              {form.type === 'CREDIT' ? 'Source' : 'Destination'}
+            </label>
+            <Select value={form.linked_account_id} onChange={e => set('linked_account_id', e.target.value)}>
+              <option value="">Externe</option>
+              {otherAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </Select>
+          </div>
+        ) : <div />}
+      </div>
+
+      {/* Ligne 2 : Type + Montant + Frais/Categorie */}
+      <div className="grid grid-cols-3 gap-2">
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Type</label>
+          <Select value={form.type} onChange={e => { set('type', e.target.value); set('linked_account_id', '') }}>
+            <option value="DEBIT">Debit</option>
+            <option value="CREDIT">Credit</option>
+          </Select>
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Montant (FCFA)</label>
+          <Input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="0" min="0" />
+        </div>
+        <div>
+          {isTransfer ? (
+            <>
+              <label className="block text-xs text-gray-500 mb-1">Frais</label>
+              <Input type="number" value={form.fees} onChange={e => set('fees', e.target.value)} placeholder="0" min="0" />
+            </>
+          ) : (
+            <>
+              <label className="block text-xs text-gray-500 mb-1">Categorie</label>
+              <Select value={form.category_id} onChange={e => set('category_id', e.target.value)}>
+                <option value="">Sans categorie</option>
+                {filteredCats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </Select>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Ligne 3 : Date + Description */}
+      <div className="grid grid-cols-3 gap-2">
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Date</label>
+          <Input type="date" value={form.date} onChange={e => set('date', e.target.value)} />
+        </div>
+        <div className="col-span-2">
+          <label className="block text-xs text-gray-500 mb-1">Description</label>
+          <Input value={form.description} onChange={e => set('description', e.target.value)} placeholder="Optionnel..." />
+        </div>
+      </div>
+
+      <div className="flex gap-2 pt-1">
+        <Button onClick={onSave} disabled={!form.amount || !form.account_id} className="flex-1">
+          {!form._id && <Plus size={13} />}
+          {form._id ? 'Sauvegarder' : 'Ajouter'}
+        </Button>
+        <Button variant="secondary" onClick={onCancel} className="flex-1">Annuler</Button>
+      </div>
+    </div>
+  )
+}
+
+function SessionDetail({ session, accounts, categories, defaultAccountId, onChanged }) {
   const { data, loading, refetch } = useAsync(
     () => window.api.forecast.getSession(session.id), [session.id]
   )
   const [form, setForm] = useState(null)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  const filteredCats = (categories || []).filter(
-    c => c.flow === 'BOTH' || c.flow === (form?.type || 'DEBIT')
-  )
-
-  const addTx = async () => {
+  const saveTx = async () => {
     if (!form?.amount || !form?.account_id) return
     const amount = parseFloat(form.amount)
     const fees   = parseFloat(form.fees) || 0
 
-    if (form.linked_account_id) {
+    if (form._id) {
+      await window.api.transactions.update({
+        id: form._id, account_id: Number(form.account_id), type: form.type,
+        amount, category_id: form.category_id ? Number(form.category_id) : null,
+        date: form.date, description: form.description || null,
+      })
+    } else if (form.linked_account_id) {
       const fromId = form.type === 'DEBIT' ? Number(form.account_id) : Number(form.linked_account_id)
       const toId   = form.type === 'CREDIT' ? Number(form.account_id) : Number(form.linked_account_id)
       await window.api.forecast.addTransfer({
-        session_id:      session.id,
-        from_account_id: fromId,
-        to_account_id:   toId,
-        amount,
-        fees,
-        date:        form.date,
-        description: form.description || null,
+        session_id: session.id, from_account_id: fromId, to_account_id: toId,
+        amount, fees, date: form.date, description: form.description || null,
       })
     } else {
       await window.api.forecast.addTransaction({
-        session_id:  session.id,
-        account_id:  Number(form.account_id),
-        type:        form.type,
-        amount,
-        category_id: form.category_id ? Number(form.category_id) : null,
-        date:        form.date,
-        description: form.description || null,
+        session_id: session.id, account_id: Number(form.account_id), type: form.type,
+        amount, category_id: form.category_id ? Number(form.category_id) : null,
+        date: form.date, description: form.description || null,
       })
     }
     setForm(null)
     refetch()
   }
 
-  const removeTx = async id => {
-    await window.api.transactions.remove(id)
-    refetch()
-  }
+  const editTx = tx => setForm({
+    _id: tx.id, account_id: tx.account_id, type: tx.type, amount: tx.amount,
+    category_id: tx.category_id || '', date: (tx.date || today()).slice(0, 10),
+    description: tx.description || '', linked_account_id: '', fees: '',
+  })
+
+  const removeTx = async id => { await window.api.transactions.remove(id); refetch() }
 
   const validate = async () => {
     if (!confirm('Valider ? Les transactions deviennent reelles et irreversibles.')) return
@@ -78,130 +161,80 @@ function SessionDetail({ session, accounts, categories, onChanged }) {
   const isValidated = !!session.validated_at
 
   return (
-    <div className="space-y-3 mt-3">
+    <div className="mt-3 space-y-3">
+      {/* Bilan + Valider */}
       <div className="flex items-center justify-between">
-        <span className={`text-sm font-semibold ${net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-          Bilan net : {net >= 0 ? '+' : ''}{fmt(net)}
-        </span>
+        <div className="flex items-center gap-2">
+          {net >= 0
+            ? <TrendingUp size={15} className="text-emerald-400" />
+            : <TrendingDown size={15} className="text-rose-400" />}
+          <span className={`text-sm font-bold ${net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {net >= 0 ? '+' : ''}{fmt(net)} FCFA
+          </span>
+        </div>
         {!isValidated && txs.length > 0 && (
           <Button size="sm" variant="success" onClick={validate}>
-            <CheckCircle size={12} />Valider (rendre reelles)
+            <CheckCircle size={12} />Valider
           </Button>
         )}
       </div>
 
+      {/* Liste des transactions */}
       {loading ? <Spinner /> : txs.length === 0 ? (
-        <p className="text-xs text-gray-600 text-center py-2">Aucune transaction dans cette simulation</p>
+        <p className="text-xs text-gray-600 text-center py-3 border border-dashed border-edge rounded-lg">
+          Aucune transaction — ajoute-en une ci-dessous
+        </p>
       ) : (
-        <table className="w-full text-xs">
-          <tbody>
-            {txs.map(tx => (
-              <tr key={tx.id} className="border-b border-gray-800/40 group">
-                <td className="py-1.5 text-gray-600">{fmtDate(tx.date)}</td>
-                <td className="px-2 py-1.5 text-gray-300">
-                  {tx.description || tx.category_name || '—'}
-                </td>
-                <td className="px-2 py-1.5">
-                  <span className="text-gray-500">{tx.account_name}</span>
-                </td>
-                <td className={`py-1.5 text-right font-mono font-medium ${tx.type === 'CREDIT' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  {tx.type === 'CREDIT' ? '+' : '-'}{fmt(tx.amount)}
-                </td>
-                {!isValidated && (
-                  <td className="py-1.5 pl-2">
-                    <button
-                      onClick={() => removeTx(tx.id)}
-                      className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-rose-400"
-                    >
-                      <Trash2 size={11} />
-                    </button>
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="space-y-1">
+          {txs.map(tx => (
+            <div key={tx.id} className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800/50 transition-colors">
+              <div className={`w-1.5 h-8 rounded-full shrink-0 ${tx.type === 'CREDIT' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-200 truncate">{tx.description || tx.category_name || '—'}</p>
+                <p className="text-xs text-gray-600">{fmtDate(tx.date)} · {tx.account_name}</p>
+              </div>
+              <span className={`text-sm font-mono font-semibold shrink-0 ${tx.type === 'CREDIT' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {tx.type === 'CREDIT' ? '+' : '-'}{fmt(tx.amount)}
+              </span>
+              {!isValidated && (
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => editTx(tx)} className="p-1.5 text-gray-600 hover:text-blue-400 rounded transition-colors">
+                    <Pencil size={12} />
+                  </button>
+                  <button onClick={() => removeTx(tx.id)} className="p-1.5 text-gray-600 hover:text-rose-400 rounded transition-colors">
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       )}
 
+      {/* Formulaire ajout/edition */}
       {!isValidated && (
-        form ? (
-          <div className="bg-gray-800/60 rounded-lg p-3 space-y-2 border border-gray-700">
-            <div className="flex gap-2 flex-wrap">
-              <select value={form.account_id} onChange={e => set('account_id', e.target.value)}
-                className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-100 text-xs focus:outline-none focus:border-blue-500">
-                {(accounts || []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
-              <select value={form.type} onChange={e => { set('type', e.target.value); set('linked_account_id', '') }}
-                className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-100 text-xs focus:outline-none focus:border-blue-500">
-                <option value="DEBIT">Debit</option>
-                <option value="CREDIT">Credit</option>
-              </select>
-              <input type="number" value={form.amount} onChange={e => set('amount', e.target.value)}
-                placeholder="Montant"
-                className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-100 text-xs focus:outline-none focus:border-blue-500 w-24" />
-              {/* Source / Destination */}
-              <select value={form.linked_account_id} onChange={e => set('linked_account_id', e.target.value)}
-                className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-100 text-xs focus:outline-none focus:border-blue-500">
-                <option value="">{form.type === 'CREDIT' ? 'Source: Externe' : 'Dest: Externe'}</option>
-                {(accounts || []).filter(a => String(a.id) !== String(form.account_id))
-                  .map(a => <option key={a.id} value={a.id}>{form.type === 'CREDIT' ? 'De: ' : 'Vers: '}{a.name}</option>)}
-              </select>
-              {form.linked_account_id && (
-                <input type="number" value={form.fees} onChange={e => set('fees', e.target.value)}
-                  placeholder="Frais"
-                  className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-100 text-xs focus:outline-none focus:border-blue-500 w-20" />
-              )}
-              {!form.linked_account_id && (
-              <select value={form.category_id} onChange={e => set('category_id', e.target.value)}
-                className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-100 text-xs focus:outline-none focus:border-blue-500">
-                <option value="">Sans categorie</option>
-                {filteredCats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-              )}
-              <input
-                type="date"
-                value={form.date}
-                onChange={e => set('date', e.target.value)}
-                className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-100 text-xs focus:outline-none focus:border-blue-500"
-              />
-              <input
-                value={form.description}
-                onChange={e => set('description', e.target.value)}
-                placeholder="Description"
-                className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-100 text-xs focus:outline-none focus:border-blue-500 flex-1 min-w-24"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" onClick={addTx} disabled={!form.amount || !form.account_id}>
-                <Plus size={11} />Ajouter
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setForm(null)}>Annuler</Button>
-            </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => setForm(emptyTx(accounts))}
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-200 transition-colors py-1"
-          >
-            <Plus size={12} />
-            Ajouter une transaction
-          </button>
-        )
+        form
+          ? <TxForm form={form} set={set} accounts={accounts} categories={categories} onSave={saveTx} onCancel={() => setForm(null)} />
+          : (
+            <button
+              onClick={() => setForm(emptyTx(accounts, defaultAccountId))}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed border-edge text-gray-500 hover:border-blue-500 hover:text-blue-400 transition-colors text-sm"
+            >
+              <Plus size={14} />Ajouter une transaction
+            </button>
+          )
       )}
     </div>
   )
 }
 
-export function ForecastModal({ isOpen, onClose, onSave, accounts, categories }) {
+export function ForecastModal({ isOpen, onClose, onSave, accounts, categories, defaultAccountId }) {
   const { data: sessions, loading, refetch } = useAsync(() => window.api.forecast.getSessions())
   const [expanded, setExpanded] = useState(null)
 
   const createSimulation = async () => {
     const n = (sessions?.length || 0) + 1
-    const s = await window.api.forecast.createSession({
-      name: `Simulation ${n}`,
-      description: '',
-    })
+    const s = await window.api.forecast.createSession({ name: `Simulation ${n}`, description: '' })
     await refetch()
     setExpanded(s.id)
     onSave()
@@ -212,77 +245,88 @@ export function ForecastModal({ isOpen, onClose, onSave, accounts, categories })
     if (!confirm('Supprimer cette simulation et toutes ses transactions ?')) return
     await window.api.forecast.deleteSession(id)
     if (expanded === id) setExpanded(null)
-    refetch()
-    onSave()
+    refetch(); onSave()
   }
+
+  const SIM_COLORS = ['#F59E0B','#818CF8','#34D399','#F472B6','#60A5FA','#FB923C']
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Simulations" wide>
-      <div className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">
+      <div className="space-y-3 max-h-[78vh] overflow-y-auto pr-1">
+
         {/* Bouton creation */}
         <button
           onClick={createSimulation}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-gray-700 text-gray-500 hover:border-blue-500 hover:text-blue-400 transition-colors text-sm font-medium"
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600/10 border border-blue-600/30 text-blue-400 hover:bg-blue-600/20 hover:border-blue-500 transition-all text-sm font-medium"
         >
           <GitBranch size={15} />
-          Nouvelle route alternative
+          Nouvelle simulation
         </button>
 
-        {/* Liste des simulations */}
+        {/* Liste */}
         {loading ? <Spinner /> : (sessions || []).length === 0 ? (
-          <p className="text-center text-gray-700 text-sm py-6">
-            Aucune simulation — cree une route alternative pour voir ce qui se passerait
-          </p>
+          <div className="text-center py-10 space-y-2">
+            <GitBranch size={28} className="mx-auto text-gray-700" />
+            <p className="text-gray-600 text-sm">Aucune simulation pour l'instant</p>
+            <p className="text-gray-700 text-xs">Cree une simulation pour explorer des scenarios alternatifs</p>
+          </div>
         ) : (
           <div className="space-y-2">
-            {(sessions || []).map((s, i) => (
-              <div key={s.id} className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700/50">
-                <button
-                  onClick={() => setExpanded(expanded === s.id ? null : s.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-750 transition-colors"
-                >
-                  {expanded === s.id
-                    ? <ChevronDown size={14} className="text-gray-500 shrink-0" />
-                    : <ChevronRight size={14} className="text-gray-500 shrink-0" />
-                  }
-                  <span className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 shrink-0">
-                    {(sessions.length - i).toString()}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-200">{s.name}</p>
-                    <p className="text-xs text-gray-600">
-                      {fmtDate(s.created_at)} · {s.tx_count} transaction{s.tx_count !== 1 ? 's' : ''}
-                      {s.validated_at ? ' · Validee' : ''}
-                    </p>
-                  </div>
-                  <span className={`text-sm font-semibold shrink-0 ${s.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {s.net >= 0 ? '+' : ''}{fmt(s.net)}
-                  </span>
-                  {s.validated_at
-                    ? <Badge color="#10B981">Validee</Badge>
-                    : (
-                      <button
-                        onClick={e => deleteSession(e, s.id)}
-                        className="p-1.5 text-gray-700 hover:text-rose-400 ml-1 transition-colors"
-                      >
+            {(sessions || []).map((s, i) => {
+              const color = SIM_COLORS[i % SIM_COLORS.length]
+              const isOpen = expanded === s.id
+              return (
+                <div key={s.id} className="rounded-xl overflow-hidden border border-edge/60"
+                  style={{ borderLeftColor: color, borderLeftWidth: 3 }}>
+                  {/* En-tête session */}
+                  <button
+                    onClick={() => setExpanded(isOpen ? null : s.id)}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left bg-gray-800/50 hover:bg-gray-800 transition-colors"
+                  >
+                    {isOpen
+                      ? <ChevronDown size={14} className="text-gray-500 shrink-0" />
+                      : <ChevronRight size={14} className="text-gray-500 shrink-0" />}
+                    <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                      style={{ backgroundColor: color + '22', color }}>
+                      {sessions.length - i}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-100">{s.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {fmtDate(s.created_at)} · {s.tx_count} transaction{s.tx_count !== 1 ? 's' : ''}
+                        {s.validated_at ? ' · Validee' : ''}
+                      </p>
+                    </div>
+                    <span className={`text-sm font-bold shrink-0 ${s.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {s.net >= 0 ? '+' : ''}{fmt(s.net)}
+                    </span>
+                    {s.validated_at ? (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-900/30 text-emerald-400 font-medium ml-1">
+                        Validee
+                      </span>
+                    ) : (
+                      <button onClick={e => deleteSession(e, s.id)}
+                        className="p-1.5 text-gray-600 hover:text-rose-400 ml-1 transition-colors rounded">
                         <Trash2 size={13} />
                       </button>
-                    )
-                  }
-                </button>
+                    )}
+                  </button>
 
-                {expanded === s.id && (
-                  <div className="px-4 pb-4 border-t border-gray-700/50">
-                    <SessionDetail
-                      session={s}
-                      accounts={accounts}
-                      categories={categories}
-                      onChanged={() => { refetch(); onSave() }}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
+                  {/* Detail session */}
+                  {isOpen && (
+                    <div className="px-4 pb-4 bg-gray-800/20 border-t border-edge/40">
+                      <SessionDetail
+                        session={s}
+                        accounts={accounts}
+                        categories={categories}
+                        defaultAccountId={defaultAccountId}
+                        onChanged={() => { refetch(); onSave() }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

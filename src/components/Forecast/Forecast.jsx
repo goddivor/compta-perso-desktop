@@ -41,7 +41,7 @@ export function Forecast() {
     return (
       <div
         onClick={() => setSelectedId(s.id)}
-        className="bg-gray-900 rounded-xl border border-gray-800 p-5 cursor-pointer hover:border-gray-700 transition-all group flex items-center gap-4"
+        className="bg-surface rounded-xl border border-edge p-5 cursor-pointer hover:border-edge transition-all group flex items-center gap-4"
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
@@ -82,7 +82,7 @@ export function Forecast() {
       </div>
 
       {(sessions || []).length === 0 ? (
-        <div className="bg-gray-900 rounded-xl border border-dashed border-gray-700 p-12 text-center">
+        <div className="bg-surface rounded-xl border border-dashed border-edge p-12 text-center">
           <p className="text-4xl mb-3">🔮</p>
           <p className="text-gray-400 font-medium mb-1">Aucune simulation</p>
           <p className="text-sm text-gray-600">Créez une simulation pour prévoir l'impact de vos dépenses.</p>

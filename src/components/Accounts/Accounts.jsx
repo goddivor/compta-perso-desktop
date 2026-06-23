@@ -30,13 +30,13 @@ export function Accounts() {
         <span className="text-xs bg-gray-800 px-2 py-0.5 rounded-full">{items.length}</span>
       </div>
       {items.length === 0 ? (
-        <div className="bg-gray-900 rounded-xl border border-dashed border-gray-700 p-6 text-center text-gray-500 text-sm">
+        <div className="bg-surface rounded-xl border border-dashed border-edge p-6 text-center text-gray-500 text-sm">
           {emptyLabel}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
           {items.map(a => (
-            <div key={a.id} className="bg-gray-900 rounded-xl border border-gray-800 p-5 group relative">
+            <div key={a.id} className="bg-surface rounded-xl border border-edge p-5 group relative">
               <div className="flex items-start justify-between mb-3">
                 <span className="w-3 h-3 rounded-full mt-1" style={{ backgroundColor: a.color }} />
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

@@ -91,7 +91,7 @@ export function Charts() {
         </Select>
       </div>
 
-      <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+      <div className="bg-surface rounded-xl border border-edge p-5">
         <h2 className="text-sm font-semibold text-gray-300 mb-4">Évolution du solde</h2>
         {l1 ? <Spinner /> : (history || []).length < 2 ? <Empty label="Pas assez de données" /> : (
           <div className="h-56">
@@ -101,7 +101,7 @@ export function Charts() {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+        <div className="bg-surface rounded-xl border border-edge p-5">
           <h2 className="text-sm font-semibold text-gray-300 mb-4">Dépenses par catégorie</h2>
           {l2 ? <Spinner /> : (byCategory || []).length === 0 ? <Empty label="Aucune dépense" /> : (
             <div className="h-52">
@@ -110,7 +110,7 @@ export function Charts() {
           )}
         </div>
 
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+        <div className="bg-surface rounded-xl border border-edge p-5">
           <h2 className="text-sm font-semibold text-gray-300 mb-4">Revenus vs Dépenses (mensuel)</h2>
           {l3 ? <Spinner /> : (monthly || []).length === 0 ? <Empty label="Aucune donnée mensuelle" /> : (
             <div className="h-52">

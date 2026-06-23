@@ -59,9 +59,9 @@ export function AccountModal({ isOpen, onClose, onSave, account }) {
           </div>
         </Field>
 
-        <div className="flex justify-end gap-2 pt-1">
-          <Button variant="secondary" onClick={onClose}>Annuler</Button>
-          <Button onClick={save} disabled={!form.name}>Enregistrer</Button>
+        <div className="flex gap-2 pt-1">
+          <Button variant="secondary" onClick={onClose} className="flex-1">Annuler</Button>
+          <Button onClick={save} disabled={!form.name} className="flex-1">Enregistrer</Button>
         </div>
       </div>
     </Modal>

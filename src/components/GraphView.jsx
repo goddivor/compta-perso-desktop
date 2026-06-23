@@ -364,10 +364,10 @@ export function GraphView({ transactions, accounts, layout = 'vertical' }) {
     return <div className="flex items-center justify-center h-full text-gray-600 text-sm">Aucune donnee a afficher</div>
 
   return (
-    <div ref={scrollRef} className="w-full h-full overflow-auto bg-gray-950">
+    <div ref={scrollRef} className="w-full h-full overflow-auto bg-base">
       <canvas ref={canvasRef} style={{ display: 'block' }} onMouseMove={onMouseMove} onMouseLeave={() => setTooltip(null)} />
       {tooltip && (
-        <div className="fixed pointer-events-none bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs shadow-xl z-50"
+        <div className="fixed pointer-events-none bg-gray-800 border border-edge rounded-lg px-3 py-2 text-xs shadow-xl z-50"
           style={{ left: tooltip.px + 14, top: tooltip.py - 60, minWidth: 160 }}>
           <p className="font-semibold mb-1" style={{ color: tooltip.simColor || tooltip.account.color }}>
             {tooltip.account.name}{tooltip.simColor ? ' (simulation)' : ''}
