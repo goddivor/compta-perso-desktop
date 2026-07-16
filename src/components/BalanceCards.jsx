@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react'
 import { fmt } from '../utils/format'
-import { Plus, Settings } from 'lucide-react'
+import { Plus, Settings, Cloud } from 'lucide-react'
 
 const LONG_PRESS_MS = 400
 
-export function BalanceCards({ summary, selectedAccount, onSelectAccount, onAddAccount, onSettings, onReorder }) {
+export function BalanceCards({ summary, selectedAccount, onSelectAccount, onAddAccount, onSettings, onSync, onReorder }) {
   const rawAccounts = summary?.accounts || []
   const total = (summary?.total_electronic ?? 0) + (summary?.total_physical ?? 0)
 
@@ -155,6 +155,14 @@ export function BalanceCards({ summary, selectedAccount, onSelectAccount, onAddA
         </button>
 
         <div className="flex-1" />
+
+        <button
+          onClick={onSync}
+          title="Synchronisation cloud"
+          className="shrink-0 flex items-center px-3 text-gray-600 hover:text-gray-300 hover:bg-gray-800/50 transition-colors"
+        >
+          <Cloud size={15} />
+        </button>
 
         <button
           onClick={onSettings}

@@ -4,6 +4,7 @@ import { registerTransfersHandlers }    from './transfers.js'
 import { registerCategoriesHandlers }   from './categories.js'
 import { registerForecastHandlers }     from './forecast.js'
 import { registerStatsHandlers }        from './stats.js'
+import { registerSyncHandlers }         from './sync.js'
 
 export function registerIpcHandlers() {
   registerAccountsHandlers()
@@ -12,4 +13,5 @@ export function registerIpcHandlers() {
   registerCategoriesHandlers()
   registerForecastHandlers()
   registerStatsHandlers()
+  registerSyncHandlers()
 }

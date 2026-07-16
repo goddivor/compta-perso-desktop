@@ -44,4 +44,11 @@ contextBridge.exposeInMainWorld('api', {
     getExpensesByCategory:(p) => invoke('stats:getExpensesByCategory', p),
     getMonthlyFlow:       (p) => invoke('stats:getMonthlyFlow', p),
   },
+  sync: {
+    getConfig: ()    => invoke('sync:getConfig'),
+    setConfig: (c)   => invoke('sync:setConfig', c),
+    push:      ()    => invoke('sync:push'),
+    pull:      ()    => invoke('sync:pull'),
+    status:    ()    => invoke('sync:status'),
+  },
 })

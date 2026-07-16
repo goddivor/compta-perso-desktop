@@ -10,6 +10,7 @@ import { AccountModal } from './components/AccountModal'
 import { ForecastModal } from './components/ForecastModal'
 import { SettingsModal } from './components/SettingsModal'
 import { FeeRuleModal } from './components/FeeRuleModal'
+import { SyncModal } from './components/SyncModal'
 import { DailyReport } from './components/DailyReport'
 import { Spinner } from './components/ui/Spinner'
 
@@ -67,6 +68,7 @@ export default function App() {
         onSelectAccount={id => setF('account_id', id === '' ? '' : String(id))}
         onAddAccount={() => openModal('account')}
         onSettings={() => openModal('settings')}
+        onSync={() => openModal('sync')}
         onReorder={refetch}
       />
 
@@ -164,6 +166,13 @@ export default function App() {
           onClose={closeModal}
           onSave={refetch}
           account={modal.data}
+        />
+      )}
+      {modal?.type === 'sync' && (
+        <SyncModal
+          isOpen
+          onClose={closeModal}
+          onSave={refetch}
         />
       )}
     </div>
