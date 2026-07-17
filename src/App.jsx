@@ -61,7 +61,7 @@ export default function App() {
   const handleSave = () => { refetch(); closeModal() }
 
   return (
-    <div className="h-screen flex flex-col bg-base text-gray-100 overflow-hidden">
+    <div className="h-screen flex flex-col bg-base text-ink overflow-hidden">
       <BalanceCards
         summary={summary}
         selectedAccount={filters.account_id ? Number(filters.account_id) : null}

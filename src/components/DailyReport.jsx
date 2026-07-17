@@ -33,7 +33,7 @@ export function DailyReport({ filters, tick }) {
   )
 
   if (!rows.length) return (
-    <div className="flex flex-col items-center justify-center h-full gap-2 text-gray-600">
+    <div className="flex flex-col items-center justify-center h-full gap-2 text-faint">
       <Minus size={28} />
       <p className="text-sm">Aucune transaction sur la période</p>
     </div>
@@ -44,19 +44,19 @@ export function DailyReport({ filters, tick }) {
       {/* Bande récap en haut */}
       <div className="shrink-0 flex items-center gap-0 border-b border-edge bg-surface">
         <div className="flex flex-col px-6 py-3 border-r border-edge">
-          <span className="text-xs text-gray-500 mb-0.5">{rows.length} jour{rows.length > 1 ? 's' : ''}</span>
-          <span className="text-sm font-semibold text-gray-200">{rows.reduce((s, r) => s + r.tx_count, 0)} transactions</span>
+          <span className="text-xs text-muted mb-0.5">{rows.length} jour{rows.length > 1 ? 's' : ''}</span>
+          <span className="text-sm font-semibold text-content">{rows.reduce((s, r) => s + r.tx_count, 0)} transactions</span>
         </div>
         <div className="flex flex-col px-6 py-3 border-r border-edge">
-          <span className="text-xs text-gray-500 mb-0.5">Total entré</span>
+          <span className="text-xs text-muted mb-0.5">Total entré</span>
           <span className="text-sm font-bold text-emerald-400">+{fmt(totalCredit)}</span>
         </div>
         <div className="flex flex-col px-6 py-3 border-r border-edge">
-          <span className="text-xs text-gray-500 mb-0.5">Total sorti</span>
+          <span className="text-xs text-muted mb-0.5">Total sorti</span>
           <span className="text-sm font-bold text-rose-400">-{fmt(totalDebit)}</span>
         </div>
         <div className="flex flex-col px-6 py-3">
-          <span className="text-xs text-gray-500 mb-0.5">Bilan net</span>
+          <span className="text-xs text-muted mb-0.5">Bilan net</span>
           <span className={`text-sm font-bold ${totalNet >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
             {totalNet >= 0 ? '+' : ''}{fmt(totalNet)}
           </span>
@@ -67,7 +67,7 @@ export function DailyReport({ filters, tick }) {
       <div className="flex-1 overflow-y-auto">
         <table className="w-full">
           <thead className="sticky top-0 bg-base z-10">
-            <tr className="border-b border-edge text-xs text-gray-500 uppercase tracking-wide">
+            <tr className="border-b border-edge text-xs text-muted uppercase tracking-wide">
               <th className="text-left px-6 py-2.5 font-medium">Date</th>
               <th className="text-right px-4 py-2.5 font-medium text-emerald-600">Entré</th>
               <th className="text-right px-4 py-2.5 font-medium text-rose-600">Sorti</th>
@@ -79,22 +79,22 @@ export function DailyReport({ filters, tick }) {
             {rows.map(row => {
               const net = row.net
               return (
-                <tr key={row.day} className="border-b border-edge/50 hover:bg-gray-800/20 transition-colors group">
+                <tr key={row.day} className="border-b border-edge/50 hover:bg-surface2/60 transition-colors group">
                   <td className="px-6 py-3">
-                    <span className="text-sm text-gray-200 font-medium">{formatDay(row.day)}</span>
+                    <span className="text-sm text-content font-medium">{formatDay(row.day)}</span>
                   </td>
                   <td className="px-4 py-3 text-right">
                     {row.total_credit > 0 ? (
                       <span className="text-sm font-mono text-emerald-400">+{fmt(row.total_credit)}</span>
                     ) : (
-                      <span className="text-gray-700">—</span>
+                      <span className="text-faint">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
                     {row.total_debit > 0 ? (
                       <span className="text-sm font-mono text-rose-400">-{fmt(row.total_debit)}</span>
                     ) : (
-                      <span className="text-gray-700">—</span>
+                      <span className="text-faint">—</span>
                     )}
                   </td>
                   <td className="px-6 py-3 text-right">
@@ -103,16 +103,16 @@ export function DailyReport({ filters, tick }) {
                         ? <TrendingUp size={13} className="text-emerald-500" />
                         : net < 0
                         ? <TrendingDown size={13} className="text-rose-500" />
-                        : <Minus size={13} className="text-gray-600" />}
+                        : <Minus size={13} className="text-faint" />}
                       <span className={`text-sm font-bold font-mono ${
-                        net > 0 ? 'text-emerald-400' : net < 0 ? 'text-rose-400' : 'text-gray-500'
+                        net > 0 ? 'text-emerald-400' : net < 0 ? 'text-rose-400' : 'text-muted'
                       }`}>
                         {net > 0 ? '+' : ''}{fmt(net)}
                       </span>
                     </div>
                   </td>
                   <td className="px-6 py-3 text-right">
-                    <span className="text-xs text-gray-500 bg-gray-800 rounded-full px-2 py-0.5">
+                    <span className="text-xs text-muted bg-surface2 rounded-full px-2 py-0.5">
                       {row.tx_count}
                     </span>
                   </td>

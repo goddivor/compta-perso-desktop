@@ -41,7 +41,7 @@ function drawNode(ctx, cx, cy, node, color, simColor) {
 
   ctx.beginPath()
   ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2)
-  ctx.fillStyle = isSim ? '#151008' : '#0F172A'
+  ctx.fillStyle = isSim ? '#151008' : '#211C1A'
   ctx.fill()
   ctx.strokeStyle = isSim ? simColor : color
   ctx.lineWidth = isSim ? 1.5 : 2
@@ -55,18 +55,18 @@ function drawNode(ctx, cx, cy, node, color, simColor) {
   if (node.tx) {
     const sign   = node.tx.type === 'CREDIT' ? '+' : '-'
     const amtClr = isSim ? simColor : (node.tx.type === 'CREDIT' ? '#34D399' : '#F87171')
-    ctx.font = '10px system-ui,sans-serif'; ctx.fillStyle = '#6B7280'
+    ctx.font = '10px system-ui,sans-serif'; ctx.fillStyle = '#A89E92'
     ctx.fillText(fmtDate(node.date), cx, cy - 22)
-    ctx.font = '11px system-ui,sans-serif'; ctx.fillStyle = isSim ? '#D4C5A0' : '#D1D5DB'
+    ctx.font = '11px system-ui,sans-serif'; ctx.fillStyle = isSim ? '#D4C5A0' : '#F5F1EC'
     ctx.fillText(clip(ctx, node.label, innerW), cx, cy - 6)
     ctx.font = 'bold 12px system-ui,sans-serif'; ctx.fillStyle = amtClr
     ctx.fillText(sign + fmt(node.tx.amount), cx, cy + 10)
-    ctx.font = '10px system-ui,sans-serif'; ctx.fillStyle = '#9CA3AF'
+    ctx.font = '10px system-ui,sans-serif'; ctx.fillStyle = '#A89E92'
     ctx.fillText('= ' + fmt(node.balance), cx, cy + 26)
   } else {
-    ctx.font = '10px system-ui,sans-serif'; ctx.fillStyle = '#6B7280'
+    ctx.font = '10px system-ui,sans-serif'; ctx.fillStyle = '#A89E92'
     ctx.fillText(fmtDate(node.date), cx, cy - 16)
-    ctx.font = '11px system-ui,sans-serif'; ctx.fillStyle = isSim ? '#D4C5A0' : '#D1D5DB'
+    ctx.font = '11px system-ui,sans-serif'; ctx.fillStyle = isSim ? '#D4C5A0' : '#F5F1EC'
     ctx.fillText(node.label, cx, cy)
     ctx.font = 'bold 12px system-ui,sans-serif'; ctx.fillStyle = isSim ? simColor : color
     ctx.fillText(fmt(node.balance), cx, cy + 18)
@@ -91,7 +91,7 @@ function drawTransferLinks(ctx, nodes) {
     const x2 = right.cx - NODE_W / 2, y2 = right.cy
     const mx = (x1 + x2) / 2
     ctx.beginPath(); ctx.setLineDash([5, 4])
-    ctx.strokeStyle = '#6366F1'; ctx.lineWidth = 1.5
+    ctx.strokeStyle = '#FFD200'; ctx.lineWidth = 1.5
     ctx.moveTo(x1, y1)
     ctx.bezierCurveTo(mx, y1, mx, y2, x2, y2)
     ctx.stroke(); ctx.setLineDash([])
@@ -100,7 +100,7 @@ function drawTransferLinks(ctx, nodes) {
     ctx.moveTo(x2, y2)
     ctx.lineTo(x2 - 9 * Math.cos(ang - Math.PI / 6), y2 - 9 * Math.sin(ang - Math.PI / 6))
     ctx.lineTo(x2 - 9 * Math.cos(ang + Math.PI / 6), y2 - 9 * Math.sin(ang + Math.PI / 6))
-    ctx.closePath(); ctx.fillStyle = '#6366F1'; ctx.fill()
+    ctx.closePath(); ctx.fillStyle = '#FFD200'; ctx.fill()
   }
 }
 
@@ -141,7 +141,7 @@ function drawVertical(ctx, canvas, realSeries, simBranches, nodesRef) {
 
   realSeries.forEach(({ account, points }, colIdx) => {
     const cx = realColX[colIdx]
-    const color = account.color || '#3B82F6'
+    const color = account.color || '#FFD200'
     ctx.font = 'bold 12px system-ui,sans-serif'; ctx.textAlign = 'center'
     ctx.fillStyle = color
     ctx.fillText(account.name, cx, V.PAD_Y - 14)
@@ -149,7 +149,7 @@ function drawVertical(ctx, canvas, realSeries, simBranches, nodesRef) {
     points.forEach((p, rowIdx) => {
       const cy = V.PAD_Y + rowIdx * V.ROW_H + NODE_H / 2
       if (rowIdx > 0)
-        drawArrow(ctx, cx, V.PAD_Y + (rowIdx - 1) * V.ROW_H + NODE_H / 2 + NODE_H / 2, cx, cy - NODE_H / 2, '#374151', false)
+        drawArrow(ctx, cx, V.PAD_Y + (rowIdx - 1) * V.ROW_H + NODE_H / 2 + NODE_H / 2, cx, cy - NODE_H / 2, '#352E2A', false)
       drawNode(ctx, cx, cy, p, color, null)
       nodesRef.current.push({ cx, cy, rx: NODE_W / 2, ry: NODE_H / 2, account, point: p })
     })
@@ -159,10 +159,10 @@ function drawVertical(ctx, canvas, realSeries, simBranches, nodesRef) {
 
   if (!simBranches.length) return
   const divY = V.PAD_Y + maxRealRows * V.ROW_H + 20
-  ctx.strokeStyle = '#1F2937'; ctx.lineWidth = 1; ctx.setLineDash([4, 6])
+  ctx.strokeStyle = '#352E2A'; ctx.lineWidth = 1; ctx.setLineDash([4, 6])
   ctx.beginPath(); ctx.moveTo(V.PAD_X, divY); ctx.lineTo(canvas.width - V.PAD_X, divY); ctx.stroke()
   ctx.setLineDash([])
-  ctx.font = '10px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#4B5563'
+  ctx.font = '10px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#807669'
   ctx.fillText('— routes alternatives —', canvas.width / 2, divY + 14)
 
   const simStartY = divY + 30
@@ -185,7 +185,7 @@ function drawVertical(ctx, canvas, realSeries, simBranches, nodesRef) {
         const cy = simStartY + rowIdx * V.SIM_ROW_H + NODE_H / 2
         if (rowIdx > 0)
           drawArrow(ctx, cx, simStartY + (rowIdx - 1) * V.SIM_ROW_H + NODE_H / 2 + NODE_H / 2, cx, cy - NODE_H / 2, simColor, true)
-        drawNode(ctx, cx, cy, p, account.color || '#3B82F6', simColor)
+        drawNode(ctx, cx, cy, p, account.color || '#FFD200', simColor)
         nodesRef.current.push({ cx, cy, rx: NODE_W / 2, ry: NODE_H / 2, account, point: p, simColor })
       })
     })
@@ -223,7 +223,7 @@ function drawHorizontal(ctx, canvas, realSeries, simBranches, nodesRef) {
   // Real rows
   realSeries.forEach(({ account, points }, rowIdx) => {
     const cy = rowY(rowIdx)
-    const color = account.color || '#3B82F6'
+    const color = account.color || '#FFD200'
 
     // Account label on the left
     ctx.font = 'bold 11px system-ui,sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = color
@@ -232,7 +232,7 @@ function drawHorizontal(ctx, canvas, realSeries, simBranches, nodesRef) {
     points.forEach((p, colIdx) => {
       const cx = nodeX(colIdx)
       if (colIdx > 0)
-        drawArrow(ctx, nodeX(colIdx - 1) + NODE_W / 2, cy, cx - NODE_W / 2, cy, '#374151', false)
+        drawArrow(ctx, nodeX(colIdx - 1) + NODE_W / 2, cy, cx - NODE_W / 2, cy, '#352E2A', false)
       drawNode(ctx, cx, cy, p, color, null)
       nodesRef.current.push({ cx, cy, rx: NODE_W / 2, ry: NODE_H / 2, account, point: p })
     })
@@ -244,10 +244,10 @@ function drawHorizontal(ctx, canvas, realSeries, simBranches, nodesRef) {
 
   // Divider after real rows
   const divY = H.PAD_Y + realSeries.length * H.ROW_H + 16
-  ctx.strokeStyle = '#1F2937'; ctx.lineWidth = 1; ctx.setLineDash([4, 6])
+  ctx.strokeStyle = '#352E2A'; ctx.lineWidth = 1; ctx.setLineDash([4, 6])
   ctx.beginPath(); ctx.moveTo(H.PAD_X, divY); ctx.lineTo(canvas.width - H.PAD_X, divY); ctx.stroke()
   ctx.setLineDash([])
-  ctx.font = '10px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#4B5563'
+  ctx.font = '10px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#807669'
   ctx.fillText('— routes alternatives —', canvas.width / 2, divY + 13)
 
   const simBaseY = divY + 26
@@ -276,7 +276,7 @@ function drawHorizontal(ctx, canvas, realSeries, simBranches, nodesRef) {
         const cx = nodeX(pIdx)
         if (pIdx > 0)
           drawArrow(ctx, nodeX(pIdx - 1) + NODE_W / 2, cy, cx - NODE_W / 2, cy, simColor, true)
-        drawNode(ctx, cx, cy, p, account.color || '#3B82F6', simColor)
+        drawNode(ctx, cx, cy, p, account.color || '#FFD200', simColor)
         nodesRef.current.push({ cx, cy, rx: NODE_W / 2, ry: NODE_H / 2, account, point: p, simColor })
       })
 
@@ -361,25 +361,25 @@ export function GraphView({ transactions, accounts, layout = 'vertical' }) {
   }
 
   if (!realSeries.length)
-    return <div className="flex items-center justify-center h-full text-gray-600 text-sm">Aucune donnee a afficher</div>
+    return <div className="flex items-center justify-center h-full text-faint text-sm">Aucune donnee a afficher</div>
 
   return (
     <div ref={scrollRef} className="w-full h-full overflow-auto bg-base">
       <canvas ref={canvasRef} style={{ display: 'block' }} onMouseMove={onMouseMove} onMouseLeave={() => setTooltip(null)} />
       {tooltip && (
-        <div className="fixed pointer-events-none bg-gray-800 border border-edge rounded-lg px-3 py-2 text-xs shadow-xl z-50"
+        <div className="fixed pointer-events-none bg-surface2 border border-edge rounded-lg px-3 py-2 text-xs shadow-xl z-50"
           style={{ left: tooltip.px + 14, top: tooltip.py - 60, minWidth: 160 }}>
           <p className="font-semibold mb-1" style={{ color: tooltip.simColor || tooltip.account.color }}>
             {tooltip.account.name}{tooltip.simColor ? ' (simulation)' : ''}
           </p>
-          <p className="text-gray-400">{fmtDate(tooltip.point.date)}</p>
-          <p className="text-gray-300 mt-0.5">{tooltip.point.label}</p>
+          <p className="text-muted">{fmtDate(tooltip.point.date)}</p>
+          <p className="text-content mt-0.5">{tooltip.point.label}</p>
           {tooltip.point.tx && (
             <p className={`mt-0.5 font-mono ${tooltip.point.tx.type === 'CREDIT' ? 'text-emerald-400' : 'text-rose-400'}`}>
               {tooltip.point.tx.type === 'CREDIT' ? '+' : '-'}{fmt(tooltip.point.tx.amount)}
             </p>
           )}
-          <p className="font-bold text-gray-100 mt-1">{fmt(tooltip.point.balance)}</p>
+          <p className="font-bold text-ink mt-1">{fmt(tooltip.point.balance)}</p>
         </div>
       )}
     </div>

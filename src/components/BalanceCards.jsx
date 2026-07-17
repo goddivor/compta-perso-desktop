@@ -98,11 +98,11 @@ export function BalanceCards({ summary, selectedAccount, onSelectAccount, onAddA
         <button
           onClick={() => onSelectAccount('')}
           className={`shrink-0 flex flex-col px-5 py-4 border-r border-edge transition-colors text-left ${
-            !selectedAccount ? 'bg-blue-600/10 border-b-2 border-b-blue-500' : 'hover:bg-gray-800/50'
+            !selectedAccount ? 'bg-primary/10 border-b-2 border-b-primary' : 'hover:bg-surface2/60'
           }`}
         >
-          <span className="text-xs text-gray-500 mb-1">Total global</span>
-          <span className="text-lg font-bold text-gray-100">{fmt(total)}</span>
+          <span className="text-xs text-muted mb-1">Total global</span>
+          <span className="text-lg font-bold text-ink">{fmt(total)}</span>
         </button>
 
         {/* Per account — draggable */}
@@ -120,20 +120,20 @@ export function BalanceCards({ summary, selectedAccount, onSelectAccount, onAddA
                 onSelectAccount(selectedAccount === a.id ? '' : a.id)
               }}
               className={`shrink-0 flex flex-col px-5 py-4 border-r transition-all text-left select-none
-                ${isOver ? 'border-l-2 border-l-blue-400' : 'border-edge'}
+                ${isOver ? 'border-l-2 border-l-primary' : 'border-edge'}
                 ${isDragging ? 'opacity-40 scale-95' : ''}
                 ${dragIdx !== null ? 'cursor-grabbing' : 'cursor-grab active:cursor-grabbing'}
-                ${selectedAccount === a.id && !dragIdx ? 'bg-gray-800 border-b-2' : 'hover:bg-gray-800/50'}
+                ${selectedAccount === a.id && !dragIdx ? 'bg-surface2 border-b-2' : 'hover:bg-surface2/60'}
               `}
               style={{
                 ...(selectedAccount === a.id && !dragIdx ? { borderBottomColor: a.color } : {}),
                 touchAction: 'none',
               }}
             >
-              <span className="text-xs text-gray-500 mb-1 flex items-center gap-1.5">
+              <span className="text-xs text-muted mb-1 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: a.color }} />
                 {a.name}
-                {a.provider && <span className="text-gray-700">· {a.provider}</span>}
+                {a.provider && <span className="text-faint">· {a.provider}</span>}
               </span>
               <span
                 className="text-base font-bold"
@@ -148,7 +148,7 @@ export function BalanceCards({ summary, selectedAccount, onSelectAccount, onAddA
         {/* Add account */}
         <button
           onClick={onAddAccount}
-          className="shrink-0 flex items-center gap-1.5 px-4 py-4 text-gray-600 hover:text-gray-300 hover:bg-gray-800/50 transition-colors border-r border-edge"
+          className="shrink-0 flex items-center gap-1.5 px-4 py-4 text-faint hover:text-content hover:bg-surface2/60 transition-colors border-r border-edge"
         >
           <Plus size={14} />
           <span className="text-xs">Compte</span>
@@ -159,14 +159,14 @@ export function BalanceCards({ summary, selectedAccount, onSelectAccount, onAddA
         <button
           onClick={onSync}
           title="Synchronisation cloud"
-          className="shrink-0 flex items-center px-3 text-gray-600 hover:text-gray-300 hover:bg-gray-800/50 transition-colors"
+          className="shrink-0 flex items-center px-3 text-faint hover:text-content hover:bg-surface2/60 transition-colors"
         >
           <Cloud size={15} />
         </button>
 
         <button
           onClick={onSettings}
-          className="shrink-0 flex items-center px-4 text-gray-600 hover:text-gray-300 hover:bg-gray-800/50 transition-colors"
+          className="shrink-0 flex items-center px-4 text-faint hover:text-content hover:bg-surface2/60 transition-colors"
         >
           <Settings size={15} />
         </button>

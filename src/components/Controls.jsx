@@ -42,23 +42,23 @@ export function Controls({
           </Button>
         </div>
 
-        <div className="w-px h-5 bg-gray-800" />
+        <div className="w-px h-5 bg-surface2" />
 
         {/* Bouton Filtres avec badge si actif */}
         <button
           onClick={() => setShowFilters(v => !v)}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
             active
-              ? 'border-blue-500 text-blue-400 bg-blue-500/10 hover:bg-blue-500/20'
+              ? 'border-primary text-primary bg-primary/10 hover:bg-primary/20'
               : showFilters
-              ? 'border-gray-600 text-gray-200 bg-gray-800'
-              : 'border-edge text-gray-500 hover:text-gray-300 hover:border-gray-600'
+              ? 'border-edge text-content bg-surface2'
+              : 'border-edge text-muted hover:text-content hover:border-edge'
           }`}
         >
           <SlidersHorizontal size={13} />
           Filtres
           {active && (
-            <span className="bg-blue-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">
+            <span className="bg-primary text-primaryInk rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">
               {[filters.type, filters.category_id, filters.date_from, filters.date_to].filter(Boolean).length}
             </span>
           )}
@@ -67,7 +67,7 @@ export function Controls({
         {active && (
           <button
             onClick={clearFilters}
-            className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-300 transition-colors"
+            className="flex items-center gap-1 text-xs text-faint hover:text-content transition-colors"
           >
             <X size={11} />
             Effacer
@@ -85,7 +85,7 @@ export function Controls({
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
                 hasRule
                   ? 'border-amber-500/50 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20'
-                  : 'border-edge text-gray-500 hover:text-gray-300 hover:border-gray-600'
+                  : 'border-edge text-muted hover:text-content hover:border-edge'
               }`}
             >
               <Percent size={12} />
@@ -97,25 +97,25 @@ export function Controls({
         <div className="flex-1" />
 
         {/* Toggle previsionnel */}
-        <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-400 select-none">
+        <label className="flex items-center gap-2 cursor-pointer text-xs text-muted select-none">
           <div
             onClick={() => setShowForecast(v => !v)}
-            className={`w-8 h-4 rounded-full transition-colors relative cursor-pointer ${showForecast ? 'bg-amber-500' : 'bg-gray-700'}`}
+            className={`w-8 h-4 rounded-full transition-colors relative cursor-pointer ${showForecast ? 'bg-primary' : 'bg-edge'}`}
           >
             <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${showForecast ? 'left-4' : 'left-0.5'}`} />
           </div>
           Previsionnel
         </label>
 
-        <div className="w-px h-5 bg-gray-800" />
+        <div className="w-px h-5 bg-surface2" />
 
         {/* Toggle orientation graphe */}
         {viewMode === 'graphe' && (
-          <div className="flex items-center bg-gray-800 rounded-lg p-0.5 gap-0.5">
+          <div className="flex items-center bg-surface2 rounded-lg p-0.5 gap-0.5">
             <button
               onClick={() => setGraphLayout('vertical')}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${
-                graphLayout === 'vertical' ? 'bg-gray-700 text-gray-100' : 'text-gray-500 hover:text-gray-300'
+                graphLayout === 'vertical' ? 'bg-edge text-ink' : 'text-muted hover:text-content'
               }`}
               title="Vue verticale"
             >
@@ -124,7 +124,7 @@ export function Controls({
             <button
               onClick={() => setGraphLayout('horizontal')}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${
-                graphLayout === 'horizontal' ? 'bg-gray-700 text-gray-100' : 'text-gray-500 hover:text-gray-300'
+                graphLayout === 'horizontal' ? 'bg-edge text-ink' : 'text-muted hover:text-content'
               }`}
               title="Vue horizontale"
             >
@@ -134,11 +134,11 @@ export function Controls({
         )}
 
         {/* Toggle vue */}
-        <div className="flex items-center bg-gray-800 rounded-lg p-0.5 gap-0.5">
+        <div className="flex items-center bg-surface2 rounded-lg p-0.5 gap-0.5">
           <button
             onClick={() => setViewMode('tableau')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-              viewMode === 'tableau' ? 'bg-gray-700 text-gray-100' : 'text-gray-500 hover:text-gray-300'
+              viewMode === 'tableau' ? 'bg-edge text-ink' : 'text-muted hover:text-content'
             }`}
           >
             <Table2 size={13} />
@@ -147,7 +147,7 @@ export function Controls({
           <button
             onClick={() => setViewMode('graphe')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-              viewMode === 'graphe' ? 'bg-gray-700 text-gray-100' : 'text-gray-500 hover:text-gray-300'
+              viewMode === 'graphe' ? 'bg-edge text-ink' : 'text-muted hover:text-content'
             }`}
           >
             <GitBranch size={13} />
@@ -156,7 +156,7 @@ export function Controls({
           <button
             onClick={() => setViewMode('rapport')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-              viewMode === 'rapport' ? 'bg-gray-700 text-gray-100' : 'text-gray-500 hover:text-gray-300'
+              viewMode === 'rapport' ? 'bg-edge text-ink' : 'text-muted hover:text-content'
             }`}
           >
             <CalendarDays size={13} />
@@ -171,7 +171,7 @@ export function Controls({
           <select
             value={filters.type}
             onChange={e => setF('type', e.target.value)}
-            className="bg-gray-800 border border-edge rounded-lg px-2 py-1.5 text-gray-100 text-xs focus:outline-none focus:border-blue-500"
+            className="bg-surface2 border border-edge rounded-lg px-2 py-1.5 text-ink text-xs focus:outline-none focus:border-primary"
           >
             <option value="">Tous types</option>
             <option value="CREDIT">Credit</option>
@@ -181,7 +181,7 @@ export function Controls({
           <select
             value={filters.category_id}
             onChange={e => setF('category_id', e.target.value)}
-            className="bg-gray-800 border border-edge rounded-lg px-2 py-1.5 text-gray-100 text-xs focus:outline-none focus:border-blue-500"
+            className="bg-surface2 border border-edge rounded-lg px-2 py-1.5 text-ink text-xs focus:outline-none focus:border-primary"
           >
             <option value="">Toutes categories</option>
             {(categories || []).map(c => (
@@ -189,19 +189,19 @@ export function Controls({
             ))}
           </select>
 
-          <span className="text-xs text-gray-600">Du</span>
+          <span className="text-xs text-faint">Du</span>
           <input
             type="date"
             value={filters.date_from}
             onChange={e => setF('date_from', e.target.value)}
-            className="bg-gray-800 border border-edge rounded-lg px-2 py-1.5 text-gray-100 text-xs focus:outline-none focus:border-blue-500"
+            className="bg-surface2 border border-edge rounded-lg px-2 py-1.5 text-ink text-xs focus:outline-none focus:border-primary"
           />
-          <span className="text-xs text-gray-600">au</span>
+          <span className="text-xs text-faint">au</span>
           <input
             type="date"
             value={filters.date_to}
             onChange={e => setF('date_to', e.target.value)}
-            className="bg-gray-800 border border-edge rounded-lg px-2 py-1.5 text-gray-100 text-xs focus:outline-none focus:border-blue-500"
+            className="bg-surface2 border border-edge rounded-lg px-2 py-1.5 text-ink text-xs focus:outline-none focus:border-primary"
           />
         </div>
       )}
