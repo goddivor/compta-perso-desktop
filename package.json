@@ -30,23 +30,42 @@
       {
         "from": "data",
         "to": "data",
-        "filter": ["**/*", "!*.db-shm", "!*.db-wal"]
+        "filter": [
+          "**/*",
+          "!*.db-shm",
+          "!*.db-wal"
+        ]
       }
     ],
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "category": "Finance",
       "maintainer": "Divor"
     },
     "deb": {
-      "depends": ["libgtk-3-0", "libnotify4", "libnss3", "libxss1", "libxtst6", "xdg-utils", "libatspi2.0-0"]
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0"
+      ]
     },
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "icon": "resources/icon.ico"
     },
     "mac": {
-      "target": ["dmg"],
+      "target": [
+        "dmg"
+      ],
       "category": "public.app-category.finance"
     }
   },
@@ -62,6 +81,7 @@
     "vite": "^5.4.10"
   },
   "dependencies": {
+    "@fontsource/poppins": "^5.2.7",
     "better-sqlite3": "^11.5.0",
     "chart.js": "^4.4.6",
     "lucide-react": "^0.460.0",
