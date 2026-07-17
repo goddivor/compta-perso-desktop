@@ -96,13 +96,13 @@ export function SyncModal({ isOpen, onClose, onSave }) {
         </div>
 
         {/* Etat du cloud */}
-        <div className="bg-gray-800 rounded-lg px-4 py-3 text-sm space-y-1.5">
+        <div className="bg-surface2 rounded-lg px-4 py-3 text-sm space-y-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-gray-400 font-medium">État du cloud</span>
+            <span className="text-muted font-medium">État du cloud</span>
             <button
               onClick={refreshStatus}
               disabled={!configured || busy === 'status'}
-              className="text-gray-500 hover:text-gray-200 transition-colors disabled:opacity-40"
+              className="text-muted hover:text-content transition-colors disabled:opacity-40"
               title="Rafraîchir"
             >
               <RefreshCw size={13} className={busy === 'status' ? 'animate-spin' : ''} />
@@ -110,20 +110,20 @@ export function SyncModal({ isOpen, onClose, onSave }) {
           </div>
           {meta ? (
             <>
-              <p className="text-gray-400 text-xs">
-                Dernier envoi : <span className="text-gray-200">{fmtDateTime(meta.pushed_at)}</span>
-                {' '}depuis <span className="text-gray-200">{meta.device}</span>
+              <p className="text-muted text-xs">
+                Dernier envoi : <span className="text-content">{fmtDateTime(meta.pushed_at)}</span>
+                {' '}depuis <span className="text-content">{meta.device}</span>
               </p>
-              <p className="text-gray-400 text-xs">
+              <p className="text-muted text-xs">
                 {meta.counts && Object.entries(meta.counts).map(([t, n]) => `${n} ${t}`).join(' · ')}
               </p>
             </>
           ) : (
-            <p className="text-gray-600 text-xs">
+            <p className="text-faint text-xs">
               {configured ? 'Aucun snapshot dans le cloud (ou API injoignable)' : 'Configurez l\'API pour voir l\'état'}
             </p>
           )}
-          <p className="text-gray-600 text-xs pt-1 border-t border-edge/50">
+          <p className="text-faint text-xs pt-1 border-t border-edge/50">
             Local — dernier envoi : {fmtDateTime(cfg.last_push)} · dernière récupération : {fmtDateTime(cfg.last_pull)}
           </p>
         </div>
@@ -150,7 +150,7 @@ export function SyncModal({ isOpen, onClose, onSave }) {
           </Button>
         </div>
 
-        <p className="text-xs text-gray-600">
+        <p className="text-xs text-faint">
           « Envoyer » remplace le contenu du cloud par tes données locales.
           « Récupérer » remplace tes données locales par celles du cloud.
         </p>

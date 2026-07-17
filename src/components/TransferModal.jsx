@@ -69,11 +69,11 @@ export function TransferModal({ isOpen, onClose, onSave, accounts }) {
         </div>
 
         {totalDebit > 0 && (
-          <div className="bg-gray-800 rounded-lg px-4 py-2.5 text-sm">
-            <p className="text-gray-400">Debit source : <span className="text-rose-400 font-medium">{fmt(totalDebit)}</span></p>
-            <p className="text-gray-400">Credit destination : <span className="text-emerald-400 font-medium">{fmt(parseFloat(form.amount) || 0)}</span></p>
+          <div className="bg-surface2 rounded-lg px-4 py-2.5 text-sm">
+            <p className="text-muted">Debit source : <span className="text-rose-400 font-medium">{fmt(totalDebit)}</span></p>
+            <p className="text-muted">Credit destination : <span className="text-emerald-400 font-medium">{fmt(parseFloat(form.amount) || 0)}</span></p>
             {parseFloat(form.fees) > 0 && (
-              <p className="text-xs text-gray-600 mt-0.5">dont {fmt(parseFloat(form.fees))} de frais</p>
+              <p className="text-xs text-faint mt-0.5">dont {fmt(parseFloat(form.fees))} de frais</p>
             )}
           </div>
         )}

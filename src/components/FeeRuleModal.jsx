@@ -48,7 +48,7 @@ export function FeeRuleModal({ isOpen, onClose, onSave, account }) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Règle de frais — ${account.name}`}>
       <div className="space-y-5">
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-muted">
           Définissez un taux de frais automatique pour ce compte. Lors d'une transaction,
           une case à cocher vous proposera d'appliquer les frais calculés.
         </p>
@@ -63,25 +63,25 @@ export function FeeRuleModal({ isOpen, onClose, onSave, account }) {
               min="0"
               step="0.001"
             />
-            <Percent size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+            <Percent size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
           </div>
         </Field>
 
         {hasRate && (
-          <div className="bg-gray-800 rounded-lg px-4 py-3 text-sm space-y-1">
-            <p className="text-gray-400">
-              Pour <span className="text-gray-200 font-medium">10 000 FCFA</span>
+          <div className="bg-surface2 rounded-lg px-4 py-3 text-sm space-y-1">
+            <p className="text-muted">
+              Pour <span className="text-content font-medium">10 000 FCFA</span>
               {' '}→ frais = <span className="text-rose-400 font-medium">{fmt(example)}</span>
             </p>
-            <p className="text-gray-400">
-              Pour <span className="text-gray-200 font-medium">50 000 FCFA</span>
+            <p className="text-muted">
+              Pour <span className="text-content font-medium">50 000 FCFA</span>
               {' '}→ frais = <span className="text-rose-400 font-medium">{fmt(Math.round(50000 * rateNum))}</span>
             </p>
           </div>
         )}
 
         {!hasRate && account.fees_rate != null && (
-          <p className="text-xs text-amber-500">
+          <p className="text-xs text-primary">
             Règle actuelle ({account.fees_rate}) — laisser vide pour supprimer.
           </p>
         )}

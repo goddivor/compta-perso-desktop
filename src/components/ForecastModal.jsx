@@ -27,21 +27,21 @@ function TxForm({ form, set, accounts, categories, onSave, onCancel }) {
 
   return (
     <div className="bg-surface rounded-xl border border-edge p-4 space-y-3 mt-2">
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+      <p className="text-xs font-semibold text-muted uppercase tracking-wider">
         {form._id ? 'Modifier la transaction' : 'Nouvelle transaction'}
       </p>
 
       {/* Ligne 1 : Compte + Source/Dest */}
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Compte</label>
+          <label className="block text-xs text-muted mb-1">Compte</label>
           <Select value={form.account_id} onChange={e => set('account_id', e.target.value)}>
             {(accounts || []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
           </Select>
         </div>
         {!form._id ? (
           <div>
-            <label className="block text-xs text-gray-500 mb-1">
+            <label className="block text-xs text-muted mb-1">
               {form.type === 'CREDIT' ? 'Source' : 'Destination'}
             </label>
             <Select value={form.linked_account_id} onChange={e => set('linked_account_id', e.target.value)}>
@@ -55,25 +55,25 @@ function TxForm({ form, set, accounts, categories, onSave, onCancel }) {
       {/* Ligne 2 : Type + Montant + Frais/Categorie */}
       <div className="grid grid-cols-3 gap-2">
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Type</label>
+          <label className="block text-xs text-muted mb-1">Type</label>
           <Select value={form.type} onChange={e => { set('type', e.target.value); set('linked_account_id', '') }}>
             <option value="DEBIT">Debit</option>
             <option value="CREDIT">Credit</option>
           </Select>
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Montant (FCFA)</label>
+          <label className="block text-xs text-muted mb-1">Montant (FCFA)</label>
           <Input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="0" min="0" />
         </div>
         <div>
           {isTransfer ? (
             <>
-              <label className="block text-xs text-gray-500 mb-1">Frais</label>
+              <label className="block text-xs text-muted mb-1">Frais</label>
               <Input type="number" value={form.fees} onChange={e => set('fees', e.target.value)} placeholder="0" min="0" />
             </>
           ) : (
             <>
-              <label className="block text-xs text-gray-500 mb-1">Categorie</label>
+              <label className="block text-xs text-muted mb-1">Categorie</label>
               <Select value={form.category_id} onChange={e => set('category_id', e.target.value)}>
                 <option value="">Sans categorie</option>
                 {filteredCats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -86,11 +86,11 @@ function TxForm({ form, set, accounts, categories, onSave, onCancel }) {
       {/* Ligne 3 : Date + Description */}
       <div className="grid grid-cols-3 gap-2">
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Date</label>
+          <label className="block text-xs text-muted mb-1">Date</label>
           <Input type="date" value={form.date} onChange={e => set('date', e.target.value)} />
         </div>
         <div className="col-span-2">
-          <label className="block text-xs text-gray-500 mb-1">Description</label>
+          <label className="block text-xs text-muted mb-1">Description</label>
           <Input value={form.description} onChange={e => set('description', e.target.value)} placeholder="Optionnel..." />
         </div>
       </div>
@@ -181,27 +181,27 @@ function SessionDetail({ session, accounts, categories, defaultAccountId, onChan
 
       {/* Liste des transactions */}
       {loading ? <Spinner /> : txs.length === 0 ? (
-        <p className="text-xs text-gray-600 text-center py-3 border border-dashed border-edge rounded-lg">
+        <p className="text-xs text-faint text-center py-3 border border-dashed border-edge rounded-lg">
           Aucune transaction — ajoute-en une ci-dessous
         </p>
       ) : (
         <div className="space-y-1">
           {txs.map(tx => (
-            <div key={tx.id} className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800/50 transition-colors">
+            <div key={tx.id} className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface2/50 transition-colors">
               <div className={`w-1.5 h-8 rounded-full shrink-0 ${tx.type === 'CREDIT' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-200 truncate">{tx.description || tx.category_name || '—'}</p>
-                <p className="text-xs text-gray-600">{fmtDate(tx.date)} · {tx.account_name}</p>
+                <p className="text-sm text-content truncate">{tx.description || tx.category_name || '—'}</p>
+                <p className="text-xs text-faint">{fmtDate(tx.date)} · {tx.account_name}</p>
               </div>
               <span className={`text-sm font-mono font-semibold shrink-0 ${tx.type === 'CREDIT' ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {tx.type === 'CREDIT' ? '+' : '-'}{fmt(tx.amount)}
               </span>
               {!isValidated && (
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => editTx(tx)} className="p-1.5 text-gray-600 hover:text-blue-400 rounded transition-colors">
+                  <button onClick={() => editTx(tx)} className="p-1.5 text-faint hover:text-primary rounded transition-colors">
                     <Pencil size={12} />
                   </button>
-                  <button onClick={() => removeTx(tx.id)} className="p-1.5 text-gray-600 hover:text-rose-400 rounded transition-colors">
+                  <button onClick={() => removeTx(tx.id)} className="p-1.5 text-faint hover:text-rose-400 rounded transition-colors">
                     <Trash2 size={12} />
                   </button>
                 </div>
@@ -218,7 +218,7 @@ function SessionDetail({ session, accounts, categories, defaultAccountId, onChan
           : (
             <button
               onClick={() => setForm(emptyTx(accounts, defaultAccountId))}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed border-edge text-gray-500 hover:border-blue-500 hover:text-blue-400 transition-colors text-sm"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed border-edge text-muted hover:border-primary hover:text-primary transition-colors text-sm"
             >
               <Plus size={14} />Ajouter une transaction
             </button>
@@ -257,7 +257,7 @@ export function ForecastModal({ isOpen, onClose, onSave, accounts, categories, d
         {/* Bouton creation */}
         <button
           onClick={createSimulation}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600/10 border border-blue-600/30 text-blue-400 hover:bg-blue-600/20 hover:border-blue-500 transition-all text-sm font-medium"
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 hover:border-primary transition-all text-sm font-medium"
         >
           <GitBranch size={15} />
           Nouvelle simulation
@@ -266,9 +266,9 @@ export function ForecastModal({ isOpen, onClose, onSave, accounts, categories, d
         {/* Liste */}
         {loading ? <Spinner /> : (sessions || []).length === 0 ? (
           <div className="text-center py-10 space-y-2">
-            <GitBranch size={28} className="mx-auto text-gray-700" />
-            <p className="text-gray-600 text-sm">Aucune simulation pour l'instant</p>
-            <p className="text-gray-700 text-xs">Cree une simulation pour explorer des scenarios alternatifs</p>
+            <GitBranch size={28} className="mx-auto text-faint" />
+            <p className="text-faint text-sm">Aucune simulation pour l'instant</p>
+            <p className="text-faint text-xs">Cree une simulation pour explorer des scenarios alternatifs</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -281,18 +281,18 @@ export function ForecastModal({ isOpen, onClose, onSave, accounts, categories, d
                   {/* En-tête session */}
                   <button
                     onClick={() => setExpanded(isOpen ? null : s.id)}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left bg-gray-800/50 hover:bg-gray-800 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left bg-surface2/50 hover:bg-surface2 transition-colors"
                   >
                     {isOpen
-                      ? <ChevronDown size={14} className="text-gray-500 shrink-0" />
-                      : <ChevronRight size={14} className="text-gray-500 shrink-0" />}
+                      ? <ChevronDown size={14} className="text-muted shrink-0" />
+                      : <ChevronRight size={14} className="text-muted shrink-0" />}
                     <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                       style={{ backgroundColor: color + '22', color }}>
                       {sessions.length - i}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-100">{s.name}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-sm font-semibold text-ink">{s.name}</p>
+                      <p className="text-xs text-muted">
                         {fmtDate(s.created_at)} · {s.tx_count} transaction{s.tx_count !== 1 ? 's' : ''}
                         {s.validated_at ? ' · Validee' : ''}
                       </p>
@@ -306,7 +306,7 @@ export function ForecastModal({ isOpen, onClose, onSave, accounts, categories, d
                       </span>
                     ) : (
                       <button onClick={e => deleteSession(e, s.id)}
-                        className="p-1.5 text-gray-600 hover:text-rose-400 ml-1 transition-colors rounded">
+                        className="p-1.5 text-faint hover:text-rose-400 ml-1 transition-colors rounded">
                         <Trash2 size={13} />
                       </button>
                     )}
@@ -314,7 +314,7 @@ export function ForecastModal({ isOpen, onClose, onSave, accounts, categories, d
 
                   {/* Detail session */}
                   {isOpen && (
-                    <div className="px-4 pb-4 bg-gray-800/20 border-t border-edge/40">
+                    <div className="px-4 pb-4 bg-surface2/20 border-t border-edge/40">
                       <SessionDetail
                         session={s}
                         accounts={accounts}

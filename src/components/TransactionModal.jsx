@@ -182,15 +182,15 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <div
                 onClick={() => setApplyFeeRule(v => !v)}
-                className={`w-7 h-3.5 rounded-full transition-colors relative cursor-pointer shrink-0 ${applyFeeRule ? 'bg-amber-500' : 'bg-gray-700'}`}
+                className={`w-7 h-3.5 rounded-full transition-colors relative cursor-pointer shrink-0 ${applyFeeRule ? 'bg-primary' : 'bg-edge'}`}
               >
                 <span className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white transition-all ${applyFeeRule ? 'left-3.5' : 'left-0.5'}`} />
               </div>
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-muted">
                 Appliquer la règle de frais{' '}
-                <span className="text-amber-400 font-medium">{feeRate}%</span>
+                <span className="text-primary font-medium">{feeRate}%</span>
                 {baseAmount > 0 && (
-                  <span className="text-gray-600 ml-1">→ {fmt(autoFees)} FCFA</span>
+                  <span className="text-faint ml-1">→ {fmt(autoFees)} FCFA</span>
                 )}
               </span>
             </label>
@@ -199,23 +199,23 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
 
         {/* Récap total si frais */}
         {feesAmt > 0 && baseAmount > 0 && form.type === 'DEBIT' && !isTransfer && (
-          <p className="text-xs text-gray-500 -mt-2">
+          <p className="text-xs text-muted -mt-2">
             Total débité : <span className="text-rose-400 font-medium">{fmt(totalDebit)}</span>
-            <span className="text-gray-600 ml-1">(dont {fmt(feesAmt)} frais)</span>
+            <span className="text-faint ml-1">(dont {fmt(feesAmt)} frais)</span>
           </p>
         )}
 
         {/* Aperçu transfert */}
         {isTransfer && baseAmount > 0 && (
-          <div className="bg-gray-800 rounded-lg px-4 py-2.5 text-sm space-y-1">
+          <div className="bg-surface2 rounded-lg px-4 py-2.5 text-sm space-y-1">
             {form.type === 'CREDIT' && sourceAccount && (
               <>
-                <p className="text-gray-400">
+                <p className="text-muted">
                   Débit <span style={{ color: sourceAccount.color }} className="font-medium">{sourceAccount.name}</span>
                   {' '}: <span className="text-rose-400 font-medium">-{fmt(totalDebit)}</span>
-                  {feesAmt > 0 && <span className="text-xs text-gray-600 ml-1">(dont {fmt(feesAmt)} frais)</span>}
+                  {feesAmt > 0 && <span className="text-xs text-faint ml-1">(dont {fmt(feesAmt)} frais)</span>}
                 </p>
-                <p className="text-gray-400">
+                <p className="text-muted">
                   Crédit <span style={{ color: currentAccount?.color }} className="font-medium">{currentAccount?.name}</span>
                   {' '}: <span className="text-emerald-400 font-medium">+{fmt(baseAmount)}</span>
                 </p>
@@ -223,12 +223,12 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
             )}
             {form.type === 'DEBIT' && destAccount && (
               <>
-                <p className="text-gray-400">
+                <p className="text-muted">
                   Débit <span style={{ color: currentAccount?.color }} className="font-medium">{currentAccount?.name}</span>
                   {' '}: <span className="text-rose-400 font-medium">-{fmt(totalDebit)}</span>
-                  {feesAmt > 0 && <span className="text-xs text-gray-600 ml-1">(dont {fmt(feesAmt)} frais)</span>}
+                  {feesAmt > 0 && <span className="text-xs text-faint ml-1">(dont {fmt(feesAmt)} frais)</span>}
                 </p>
-                <p className="text-gray-400">
+                <p className="text-muted">
                   Crédit <span style={{ color: destAccount.color }} className="font-medium">{destAccount.name}</span>
                   {' '}: <span className="text-emerald-400 font-medium">+{fmt(baseAmount)}</span>
                 </p>
