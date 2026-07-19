@@ -22,7 +22,6 @@ export default function App() {
   const [filters, setFilters] = useState(emptyFilters)
   const [showForecast, setShowForecast] = useState(false)
   const [viewMode, setViewMode] = useState('tableau')
-  const [graphLayout, setGraphLayout] = useState('vertical')
 
   const setF = (key, value) => setFilters(f => ({ ...f, [key]: value }))
 
@@ -103,8 +102,6 @@ export default function App() {
         setShowForecast={setShowForecast}
         viewMode={viewMode}
         setViewMode={setViewMode}
-        graphLayout={graphLayout}
-        setGraphLayout={setGraphLayout}
         categories={categories}
         accounts={accounts}
         onAddTx={() => openModal('tx')}
@@ -135,7 +132,6 @@ export default function App() {
           <GraphView
             transactions={allTransactions || []}
             accounts={accounts || []}
-            layout={graphLayout}
           />
         )}
       </main>

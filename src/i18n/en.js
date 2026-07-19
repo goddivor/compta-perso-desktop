@@ -41,8 +41,6 @@ export const en = {
   'controls.feeRuleDefine': 'Set a fee rule',
   'controls.fees': 'Fees',
   'controls.forecast': 'Forecast',
-  'controls.verticalView': 'Vertical view',
-  'controls.horizontalView': 'Horizontal view',
   'controls.table': 'Table',
   'controls.graph': 'Graph',
   'controls.report': 'Report',
@@ -71,10 +69,9 @@ export const en = {
 
   // GraphView
   'graph.initialBalance': 'Initial balance',
-  'graph.altRoutes': '— alternative routes —',
-  'graph.sim': 'Sim {n} · {name}',
   'graph.simulation': ' (simulation)',
   'graph.empty': 'No data to display',
+  'graph.recenter': 'Recenter the graph',
 
   // TransactionModal
   'tx.editTitle': 'Edit transaction',

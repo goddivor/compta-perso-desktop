@@ -41,8 +41,6 @@ export const fr = {
   'controls.feeRuleDefine': 'Définir une règle de frais',
   'controls.fees': 'Frais',
   'controls.forecast': 'Prévisionnel',
-  'controls.verticalView': 'Vue verticale',
-  'controls.horizontalView': 'Vue horizontale',
   'controls.table': 'Tableau',
   'controls.graph': 'Graphe',
   'controls.report': 'Rapport',
@@ -71,10 +69,9 @@ export const fr = {
 
   // GraphView
   'graph.initialBalance': 'Solde initial',
-  'graph.altRoutes': '— routes alternatives —',
-  'graph.sim': 'Sim {n} · {name}',
   'graph.simulation': ' (simulation)',
   'graph.empty': 'Aucune donnée à afficher',
+  'graph.recenter': 'Recentrer le graphe',
 
   // TransactionModal
   'tx.editTitle': 'Modifier la transaction',

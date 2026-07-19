@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Select, Input } from './ui/Field'
 import { Button } from './ui/Button'
 import { useT } from '../i18n'
-import { Plus, ArrowLeftRight, TrendingUp, Table2, GitBranch, SlidersHorizontal, X, AlignStartVertical, AlignStartHorizontal, CalendarDays, Percent } from 'lucide-react'
+import { Plus, ArrowLeftRight, TrendingUp, Table2, GitBranch, SlidersHorizontal, X, CalendarDays, Percent } from 'lucide-react'
 
 const hasActiveFilters = f => f.type || f.category_id || f.date_from || f.date_to
 
@@ -10,7 +10,6 @@ export function Controls({
   filters, setF,
   showForecast, setShowForecast,
   viewMode, setViewMode,
-  graphLayout, setGraphLayout,
   categories, accounts,
   onAddTx, onTransfer, onForecast, onFeeRule,
 }) {
@@ -110,30 +109,6 @@ export function Controls({
         </label>
 
         <div className="w-px h-5 bg-surface2" />
-
-        {/* Toggle orientation graphe */}
-        {viewMode === 'graphe' && (
-          <div className="flex items-center bg-surface2 rounded-lg p-0.5 gap-0.5">
-            <button
-              onClick={() => setGraphLayout('vertical')}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${
-                graphLayout === 'vertical' ? 'bg-edge text-ink' : 'text-muted hover:text-content'
-              }`}
-              title={t('controls.verticalView')}
-            >
-              <AlignStartVertical size={13} />
-            </button>
-            <button
-              onClick={() => setGraphLayout('horizontal')}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${
-                graphLayout === 'horizontal' ? 'bg-edge text-ink' : 'text-muted hover:text-content'
-              }`}
-              title={t('controls.horizontalView')}
-            >
-              <AlignStartHorizontal size={13} />
-            </button>
-          </div>
-        )}
 
         {/* Toggle vue */}
         <div className="flex items-center bg-surface2 rounded-lg p-0.5 gap-0.5">
