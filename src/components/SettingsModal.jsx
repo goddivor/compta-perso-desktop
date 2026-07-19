@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Modal } from './ui/Modal'
 import { Button } from './ui/Button'
 import { Input, Select } from './ui/Field'
 import { Spinner } from './ui/Spinner'
 import { useAsync } from '../hooks/useAsync'
-import { Plus, Trash2, Pencil, Check, X } from 'lucide-react'
+import { Plus, Trash2, Pencil, Check, X, Globe, Github, RefreshCw, Download, RotateCcw } from 'lucide-react'
 
 const COLORS = ['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#06B6D4','#F97316','#6B7280','#84CC16']
 const emptyForm = { name: '', flow: 'DEBIT', color: '#3B82F6' }
@@ -89,6 +89,114 @@ function CategoryCard({ cat, onSaved, onDeleted }) {
   )
 }
 
+function AboutSection() {
+  const [version, setVersion] = useState('')
+  const [upd, setUpd] = useState({ step: 'idle' })
+  const [percent, setPercent] = useState(0)
+
+  useEffect(() => {
+    window.api.app?.getVersion().then(setVersion).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    const off = window.api.updates?.onProgress(p => setPercent(p.percent))
+    return off
+  }, [])
+
+  const check = async () => {
+    setUpd({ step: 'checking' })
+    const r = await window.api.updates.check()
+    if (r.available)   setUpd({ step: 'available', version: r.version, notes: r.notes })
+    else if (r.error)  setUpd({ step: 'error', error: r.error })
+    else               setUpd({ step: 'uptodate' })
+  }
+
+  const download = async () => {
+    setPercent(0)
+    setUpd(s => ({ ...s, step: 'downloading' }))
+    const r = await window.api.updates.download()
+    if (r.ok) setUpd(s => ({ ...s, step: 'downloaded' }))
+    else      setUpd({ step: 'error', error: r.error })
+  }
+
+  const open = url => window.api.app.openExternal(url)
+
+  return (
+    <div className="mt-6 pt-4 border-t border-edge">
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-xs text-muted font-medium uppercase tracking-wide">À propos</p>
+          <p className="text-sm text-content mt-1">
+            Compta Perso <span className="text-faint">v{version || '…'}</span>
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => open('https://goddivor.github.io/compta-perso/')}
+            title="Site web"
+            className="p-2 rounded-lg text-muted hover:text-ink hover:bg-surface2 transition-colors">
+            <Globe size={15} />
+          </button>
+          <button
+            onClick={() => open('https://github.com/goddivor/compta-perso-desktop')}
+            title="Code source sur GitHub"
+            className="p-2 rounded-lg text-muted hover:text-ink hover:bg-surface2 transition-colors">
+            <Github size={15} />
+          </button>
+          {(upd.step === 'idle' || upd.step === 'error' || upd.step === 'uptodate' || upd.step === 'checking') && (
+            <Button variant="secondary" size="sm" onClick={check} disabled={upd.step === 'checking'}>
+              <RefreshCw size={13} className={upd.step === 'checking' ? 'animate-spin' : ''} />
+              {upd.step === 'checking' ? 'Vérification…' : 'Vérifier les mises à jour'}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {upd.step === 'uptodate' && (
+        <p className="mt-2 text-xs text-emerald-400 flex items-center gap-1">
+          <Check size={12} />L'application est à jour
+        </p>
+      )}
+      {upd.step === 'error' && (
+        <p className="mt-2 text-xs text-rose-400">Vérification impossible ({upd.error})</p>
+      )}
+
+      {(upd.step === 'available' || upd.step === 'downloading' || upd.step === 'downloaded') && (
+        <div className="mt-3 bg-surface2/60 border border-edge/60 rounded-xl p-3 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-content font-medium">
+              Version {upd.version} disponible
+            </p>
+            {upd.step === 'available' && (
+              <Button size="sm" onClick={download}>
+                <Download size={13} />Télécharger
+              </Button>
+            )}
+            {upd.step === 'downloaded' && (
+              <Button size="sm" onClick={() => window.api.updates.install()}>
+                <RotateCcw size={13} />Redémarrer et installer
+              </Button>
+            )}
+          </div>
+          {upd.step === 'downloading' && (
+            <div>
+              <div className="h-1.5 bg-edge rounded-full overflow-hidden">
+                <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${percent}%` }} />
+              </div>
+              <p className="text-xs text-faint mt-1">Téléchargement… {percent}%</p>
+            </div>
+          )}
+          {upd.notes && (
+            <div className="max-h-28 overflow-y-auto text-xs text-muted whitespace-pre-wrap bg-base/40 rounded-lg p-2 border border-edge/40">
+              {upd.notes.replace(/<[^>]+>/g, '')}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function SettingsModal({ isOpen, onClose, onSave }) {
   const { data: categories, loading, refetch } = useAsync(() => window.api.categories.getAll())
   const [form, setForm] = useState(emptyForm)
@@ -156,6 +264,8 @@ export function SettingsModal({ isOpen, onClose, onSave }) {
           </Button>
         </div>
       </div>
+
+      <AboutSection />
     </Modal>
   )
 }

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useAsync } from './hooks/useAsync'
 import { BalanceCards } from './components/BalanceCards'
 import { Controls } from './components/Controls'
@@ -31,6 +31,12 @@ export default function App() {
   const [tick, setTick] = useState(0)
   const refetch = useCallback(() => setTick(t => t + 1), [])
 
+  const [updateInfo, setUpdateInfo] = useState(null)
+  useEffect(() => {
+    const off = window.api.updates?.onAvailable(info => setUpdateInfo(info))
+    return off
+  }, [])
+
   const { data: accounts } = useAsync(
     () => window.api.accounts.getAll(), [tick]
   )
@@ -62,6 +68,22 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col bg-base text-ink overflow-hidden">
+      {updateInfo && (
+        <div className="flex items-center justify-center gap-3 px-4 py-1.5 bg-primary/10 border-b border-primary/30 text-xs text-content">
+          <span>Mise à jour v{updateInfo.version} disponible</span>
+          <button
+            onClick={() => { setUpdateInfo(null); openModal('settings') }}
+            className="font-semibold text-primary hover:underline">
+            Ouvrir les réglages
+          </button>
+          <button
+            onClick={() => setUpdateInfo(null)}
+            title="Ignorer"
+            className="text-muted hover:text-ink transition-colors">
+            ✕
+          </button>
+        </div>
+      )}
       <BalanceCards
         summary={summary}
         selectedAccount={filters.account_id ? Number(filters.account_id) : null}
