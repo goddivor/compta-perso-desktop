@@ -51,4 +51,23 @@ contextBridge.exposeInMainWorld('api', {
     pull:      ()    => invoke('sync:pull'),
     status:    ()    => invoke('sync:status'),
   },
+  app: {
+    getVersion:   ()    => invoke('app:getVersion'),
+    openExternal: (url) => invoke('app:openExternal', url),
+  },
+  updates: {
+    check:    () => invoke('update:check'),
+    download: () => invoke('update:download'),
+    install:  () => invoke('update:install'),
+    onProgress: (cb) => {
+      const listener = (_, data) => cb(data)
+      ipcRenderer.on('update:progress', listener)
+      return () => ipcRenderer.removeListener('update:progress', listener)
+    },
+    onAvailable: (cb) => {
+      const listener = (_, data) => cb(data)
+      ipcRenderer.on('update:available', listener)
+      return () => ipcRenderer.removeListener('update:available', listener)
+    },
+  },
 })

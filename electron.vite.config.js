@@ -8,7 +8,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    // electron-updater est bundle dans le main (la config electron-builder
+    // n'embarque pas tout node_modules dans le paquet final)
+    plugins: [externalizeDepsPlugin({ exclude: ['electron-updater'] })],
     build: {
       rollupOptions: {
         input: {

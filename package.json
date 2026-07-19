@@ -6,6 +6,7 @@
   "homepage": "https://github.com/divor/compta-perso",
   "main": "out/main/index.js",
   "type": "module",
+  "desktopName": "compta-perso.desktop",
   "scripts": {
     "dev": "electron-vite dev -- --no-sandbox",
     "build": "electron-vite build",
@@ -17,6 +18,13 @@
   "build": {
     "appId": "com.divor.compta-perso",
     "productName": "Compta Perso",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "goddivor",
+        "repo": "compta-perso-desktop"
+      }
+    ],
     "directories": {
       "buildResources": "resources",
       "output": "dist"
@@ -43,7 +51,8 @@
         "deb"
       ],
       "category": "Finance",
-      "maintainer": "Divor"
+      "maintainer": "Divor",
+      "syncDesktopName": true
     },
     "deb": {
       "depends": [
@@ -84,6 +93,7 @@
     "@fontsource/poppins": "^5.2.7",
     "better-sqlite3": "^11.5.0",
     "chart.js": "^4.4.6",
+    "electron-updater": "^6.8.9",
     "lucide-react": "^0.460.0",
     "react": "^18.3.1",
     "react-chartjs-2": "^5.2.0",
