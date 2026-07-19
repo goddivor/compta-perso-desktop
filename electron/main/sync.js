@@ -1,10 +1,11 @@
 import { app } from 'electron'
 import { join } from 'path'
 import { hostname } from 'os'
-import { readFileSync, writeFileSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, rmSync } from 'fs'
 import { getDb } from './db.js'
 
 const TABLES = ['accounts', 'categories', 'transactions', 'forecast_sessions']
+const CONFIG_URL = 'https://compta-perso-sync-api.vercel.app/api/config'
 
 function configPath() {
   return join(app.getPath('userData'), 'sync-config.json')
@@ -24,6 +25,47 @@ export function saveSyncConfig(cfg) {
   const next = { ...current, ...cfg }
   writeFileSync(configPath(), JSON.stringify(next, null, 2))
   return next
+}
+
+export function resetSyncConfig() {
+  try { rmSync(configPath(), { force: true }) } catch (_) {}
+}
+
+function syncError(message, code) {
+  const e = new Error(message)
+  e.code = code
+  return e
+}
+
+/**
+ * Recupere l'URL de l'API et le token aupres du serveur de configuration
+ * (cle inlinee au build via MAIN_VITE_CONFIG_KEY), puis les persiste.
+ */
+export async function fetchRemoteConfig() {
+  const key = import.meta.env.MAIN_VITE_CONFIG_KEY
+  if (!key) throw syncError('Cle de configuration absente du build', 'no_key')
+
+  let res
+  try {
+    res = await fetch(CONFIG_URL, { headers: { 'X-Config-Key': key } })
+  } catch (_) {
+    throw syncError('Serveur de configuration injoignable', 'network')
+  }
+
+  if (res.status === 401 || res.status === 403) {
+    throw syncError('Cle de configuration refusee par le serveur', 'unauthorized')
+  }
+  const body = await res.json().catch(() => ({}))
+  if (!res.ok || !body.ok || !body.api_url || !body.token) {
+    throw syncError(body.error || `HTTP ${res.status}`, 'server')
+  }
+
+  const saved = saveSyncConfig({
+    api_url: body.api_url,
+    token: body.token,
+    config_fetched_at: new Date().toISOString(),
+  })
+  return { config_fetched_at: saved.config_fetched_at }
 }
 
 function assertConfigured(cfg) {

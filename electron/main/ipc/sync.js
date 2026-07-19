@@ -1,15 +1,30 @@
 import { ipcMain } from 'electron'
-import { getSyncConfig, saveSyncConfig, syncPush, syncPull, syncStatus } from '../sync.js'
+import { getSyncConfig, fetchRemoteConfig, resetSyncConfig, syncPush, syncPull, syncStatus } from '../sync.js'
 
 export function registerSyncHandlers() {
+  // Ne renvoie JAMAIS le token (ni l'URL) au renderer
   ipcMain.handle('sync:getConfig', () => {
-    const { token, ...rest } = getSyncConfig()
-    return { ...rest, has_token: !!token, token }
+    const cfg = getSyncConfig()
+    return {
+      configured: !!(cfg.api_url && cfg.token),
+      config_fetched_at: cfg.config_fetched_at || null,
+      last_push: cfg.last_push || null,
+      last_pull: cfg.last_pull || null,
+    }
   })
 
-  ipcMain.handle('sync:setConfig', (_, cfg) => {
-    const saved = saveSyncConfig({ api_url: cfg.api_url ?? '', token: cfg.token ?? '' })
-    return { ok: true, api_url: saved.api_url }
+  ipcMain.handle('sync:fetchConfig', async () => {
+    try {
+      const r = await fetchRemoteConfig()
+      return { ok: true, ...r }
+    } catch (e) {
+      return { ok: false, error: e.message, code: e.code || 'server' }
+    }
+  })
+
+  ipcMain.handle('sync:resetConfig', () => {
+    resetSyncConfig()
+    return { ok: true }
   })
 
   ipcMain.handle('sync:push', async () => {

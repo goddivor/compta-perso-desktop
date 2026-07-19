@@ -45,11 +45,12 @@ contextBridge.exposeInMainWorld('api', {
     getMonthlyFlow:       (p) => invoke('stats:getMonthlyFlow', p),
   },
   sync: {
-    getConfig: ()    => invoke('sync:getConfig'),
-    setConfig: (c)   => invoke('sync:setConfig', c),
-    push:      ()    => invoke('sync:push'),
-    pull:      ()    => invoke('sync:pull'),
-    status:    ()    => invoke('sync:status'),
+    getConfig:   () => invoke('sync:getConfig'),
+    fetchConfig: () => invoke('sync:fetchConfig'),
+    resetConfig: () => invoke('sync:resetConfig'),
+    push:        () => invoke('sync:push'),
+    pull:        () => invoke('sync:pull'),
+    status:      () => invoke('sync:status'),
   },
   app: {
     getVersion:   ()    => invoke('app:getVersion'),
