@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react'
 import { Modal } from './ui/Modal'
 import { Button } from './ui/Button'
 import { Field, Input, Select } from './ui/Field'
+import { useT } from '../i18n'
 
 const COLORS = ['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#06B6D4','#F97316','#6B7280','#84CC16']
 const empty  = { name: '', type: 'ELECTRONIC', provider: '', initial_balance: '', currency: 'FCFA', color: '#3B82F6' }
 
 export function AccountModal({ isOpen, onClose, onSave, account }) {
+  const t = useT()
   const [form, setForm] = useState(empty)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -23,30 +25,30 @@ export function AccountModal({ isOpen, onClose, onSave, account }) {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={account ? 'Modifier le compte' : 'Nouveau compte'}>
+    <Modal isOpen={isOpen} onClose={onClose} title={account ? t('account.editTitle') : t('account.newTitle')}>
       <div className="space-y-4">
-        <Field label="Nom">
-          <Input value={form.name} onChange={e => set('name', e.target.value)} placeholder="Ex: Mon compte Orabank" />
+        <Field label={t('common.name')}>
+          <Input value={form.name} onChange={e => set('name', e.target.value)} placeholder={t('account.namePlaceholder')} />
         </Field>
 
-        <Field label="Type">
+        <Field label={t('common.type')}>
           <Select value={form.type} onChange={e => set('type', e.target.value)}>
-            <option value="ELECTRONIC">Monnaie electronique</option>
-            <option value="PHYSICAL">Monnaie physique (cash)</option>
+            <option value="ELECTRONIC">{t('account.electronic')}</option>
+            <option value="PHYSICAL">{t('account.physical')}</option>
           </Select>
         </Field>
 
         {form.type === 'ELECTRONIC' && (
-          <Field label="Operateur / Banque">
-            <Input value={form.provider} onChange={e => set('provider', e.target.value)} placeholder="Orabank, Tmoney..." />
+          <Field label={t('account.provider')}>
+            <Input value={form.provider} onChange={e => set('provider', e.target.value)} placeholder={t('account.providerPlaceholder')} />
           </Field>
         )}
 
-        <Field label="Solde initial (FCFA)">
+        <Field label={t('account.initialBalance')}>
           <Input type="number" value={form.initial_balance} onChange={e => set('initial_balance', e.target.value)} placeholder="0" />
         </Field>
 
-        <Field label="Couleur">
+        <Field label={t('common.color')}>
           <div className="flex gap-2 flex-wrap">
             {COLORS.map(c => (
               <button
@@ -60,8 +62,8 @@ export function AccountModal({ isOpen, onClose, onSave, account }) {
         </Field>
 
         <div className="flex gap-2 pt-1">
-          <Button variant="secondary" onClick={onClose} className="flex-1">Annuler</Button>
-          <Button onClick={save} disabled={!form.name} className="flex-1">Enregistrer</Button>
+          <Button variant="secondary" onClick={onClose} className="flex-1">{t('common.cancel')}</Button>
+          <Button onClick={save} disabled={!form.name} className="flex-1">{t('common.save')}</Button>
         </div>
       </div>
     </Modal>

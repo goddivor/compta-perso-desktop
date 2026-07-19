@@ -3,8 +3,10 @@ import { fmt, fmtDate } from '../utils/format'
 import { Badge } from './ui/Badge'
 import { Spinner, Empty } from './ui/Spinner'
 import { Edit2, Trash2, ArrowLeftRight } from 'lucide-react'
+import { useT } from '../i18n'
 
 export function TableView({ transactions, loading, onEdit, onDelete }) {
+  const t = useT()
   const bottomRef = useRef()
 
   useEffect(() => {
@@ -12,18 +14,18 @@ export function TableView({ transactions, loading, onEdit, onDelete }) {
   }, [transactions])
 
   if (loading) return <Spinner />
-  if (!transactions?.length) return <Empty label="Aucune transaction" />
+  if (!transactions?.length) return <Empty label={t('table.empty')} />
 
   return (
     <div className="overflow-auto h-full">
       <table className="w-full text-sm border-collapse">
         <thead className="sticky top-0 bg-base z-10">
           <tr className="border-b border-edge text-xs text-muted uppercase tracking-wide">
-            <th className="px-4 py-3 text-left">Date</th>
-            <th className="px-3 py-3 text-left">Description</th>
-            <th className="px-3 py-3 text-left">Compte</th>
-            <th className="px-3 py-3 text-left">Categorie</th>
-            <th className="px-4 py-3 text-right">Montant</th>
+            <th className="px-4 py-3 text-left">{t('common.date')}</th>
+            <th className="px-3 py-3 text-left">{t('common.description')}</th>
+            <th className="px-3 py-3 text-left">{t('common.account')}</th>
+            <th className="px-3 py-3 text-left">{t('common.category')}</th>
+            <th className="px-4 py-3 text-right">{t('common.amount')}</th>
             <th className="px-3 py-3 w-16" />
           </tr>
         </thead>
@@ -53,7 +55,7 @@ export function TableView({ transactions, loading, onEdit, onDelete }) {
                   </div>
                   {isForecast && (
                     <span className="text-xs text-amber-500 block">
-                      {tx.forecast_session_name || 'Previsionnel'}
+                      {tx.forecast_session_name || t('table.forecast')}
                     </span>
                   )}
                 </td>
@@ -81,13 +83,14 @@ export function TableView({ transactions, loading, onEdit, onDelete }) {
                     <button
                       onClick={() => onEdit(tx)}
                       className="p-1.5 rounded text-faint hover:text-ink hover:bg-edge transition-colors"
-                      title={tx.transfer_pair_id ? 'Modifier le transfert' : 'Modifier'}
+                      title={tx.transfer_pair_id ? t('table.editTransfer') : t('common.edit')}
                     >
                       <Edit2 size={12} />
                     </button>
                     <button
                       onClick={() => onDelete(tx.id)}
                       className="p-1.5 rounded text-faint hover:text-rose-400 hover:bg-edge transition-colors"
+                      title={t('common.delete')}
                     >
                       <Trash2 size={12} />
                     </button>

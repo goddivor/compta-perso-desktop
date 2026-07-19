@@ -3,8 +3,10 @@ import { Modal } from './ui/Modal'
 import { Button } from './ui/Button'
 import { Field, Input, Select } from './ui/Field'
 import { today, fmt } from '../utils/format'
+import { useT } from '../i18n'
 
 export function TransferModal({ isOpen, onClose, onSave, accounts }) {
+  const t = useT()
   const [form, setForm] = useState({ from_id: '', to_id: '', amount: '', fees: '', date: today(), description: '' })
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -32,18 +34,18 @@ export function TransferModal({ isOpen, onClose, onSave, accounts }) {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Retrait / Virement entre comptes">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('transfer.title')}>
       <div className="space-y-4">
-        <Field label="Compte source (sera debite)">
+        <Field label={t('transfer.sourceAccount')}>
           <Select value={form.from_id} onChange={e => set('from_id', e.target.value)}>
-            <option value="">— Choisir —</option>
+            <option value="">{t('common.choose')}</option>
             {(accounts || []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
           </Select>
         </Field>
 
-        <Field label="Compte destination (sera credite)">
+        <Field label={t('transfer.destAccount')}>
           <Select value={form.to_id} onChange={e => set('to_id', e.target.value)}>
-            <option value="">— Choisir —</option>
+            <option value="">{t('common.choose')}</option>
             {(accounts || []).filter(a => String(a.id) !== String(form.from_id)).map(a => (
               <option key={a.id} value={a.id}>{a.name}</option>
             ))}
@@ -51,36 +53,36 @@ export function TransferModal({ isOpen, onClose, onSave, accounts }) {
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Montant transfere (FCFA)">
+          <Field label={t('transfer.amountFcfa')}>
             <Input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="0" />
           </Field>
-          <Field label="Frais de retrait (FCFA)">
+          <Field label={t('transfer.feesFcfa')}>
             <Input type="number" value={form.fees} onChange={e => set('fees', e.target.value)} placeholder="0" />
           </Field>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Date">
+          <Field label={t('common.date')}>
             <Input type="date" value={form.date} onChange={e => set('date', e.target.value)} />
           </Field>
-          <Field label="Description">
-            <Input value={form.description} onChange={e => set('description', e.target.value)} placeholder="Optionnel" />
+          <Field label={t('common.description')}>
+            <Input value={form.description} onChange={e => set('description', e.target.value)} placeholder={t('common.optional')} />
           </Field>
         </div>
 
         {totalDebit > 0 && (
           <div className="bg-surface2 rounded-lg px-4 py-2.5 text-sm">
-            <p className="text-muted">Debit source : <span className="text-rose-400 font-medium">{fmt(totalDebit)}</span></p>
-            <p className="text-muted">Credit destination : <span className="text-emerald-400 font-medium">{fmt(parseFloat(form.amount) || 0)}</span></p>
+            <p className="text-muted">{t('transfer.debitSource')} <span className="text-rose-400 font-medium">{fmt(totalDebit)}</span></p>
+            <p className="text-muted">{t('transfer.creditDest')} <span className="text-emerald-400 font-medium">{fmt(parseFloat(form.amount) || 0)}</span></p>
             {parseFloat(form.fees) > 0 && (
-              <p className="text-xs text-faint mt-0.5">dont {fmt(parseFloat(form.fees))} de frais</p>
+              <p className="text-xs text-faint mt-0.5">{t('transfer.inclFees', { x: fmt(parseFloat(form.fees)) })}</p>
             )}
           </div>
         )}
 
         <div className="flex gap-2 pt-1">
-          <Button variant="secondary" onClick={onClose} className="flex-1">Annuler</Button>
-          <Button onClick={save} disabled={!valid} className="flex-1">Virer</Button>
+          <Button variant="secondary" onClick={onClose} className="flex-1">{t('common.cancel')}</Button>
+          <Button onClick={save} disabled={!valid} className="flex-1">{t('transfer.submit')}</Button>
         </div>
       </div>
     </Modal>

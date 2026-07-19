@@ -5,6 +5,7 @@ import { Button } from './ui/Button'
 import { Spinner } from './ui/Spinner'
 import { fmt, fmtDate, today } from '../utils/format'
 import { Input, Select } from './ui/Field'
+import { useT } from '../i18n'
 import { Plus, ChevronRight, ChevronDown, CheckCircle, Trash2, GitBranch, Pencil, TrendingUp, TrendingDown } from 'lucide-react'
 
 const emptyTx = (accounts, defaultAccountId) => ({
@@ -19,6 +20,7 @@ const emptyTx = (accounts, defaultAccountId) => ({
 })
 
 function TxForm({ form, set, accounts, categories, onSave, onCancel }) {
+  const t = useT()
   const filteredCats = (categories || []).filter(
     c => c.flow === 'BOTH' || c.flow === form.type
   )
@@ -28,13 +30,13 @@ function TxForm({ form, set, accounts, categories, onSave, onCancel }) {
   return (
     <div className="bg-surface rounded-xl border border-edge p-4 space-y-3 mt-2">
       <p className="text-xs font-semibold text-muted uppercase tracking-wider">
-        {form._id ? 'Modifier la transaction' : 'Nouvelle transaction'}
+        {form._id ? t('forecast.editTx') : t('forecast.newTx')}
       </p>
 
       {/* Ligne 1 : Compte + Source/Dest */}
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="block text-xs text-muted mb-1">Compte</label>
+          <label className="block text-xs text-muted mb-1">{t('common.account')}</label>
           <Select value={form.account_id} onChange={e => set('account_id', e.target.value)}>
             {(accounts || []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
           </Select>
@@ -42,10 +44,10 @@ function TxForm({ form, set, accounts, categories, onSave, onCancel }) {
         {!form._id ? (
           <div>
             <label className="block text-xs text-muted mb-1">
-              {form.type === 'CREDIT' ? 'Source' : 'Destination'}
+              {form.type === 'CREDIT' ? t('forecast.source') : t('forecast.dest')}
             </label>
             <Select value={form.linked_account_id} onChange={e => set('linked_account_id', e.target.value)}>
-              <option value="">Externe</option>
+              <option value="">{t('forecast.external')}</option>
               {otherAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
             </Select>
           </div>
@@ -55,27 +57,27 @@ function TxForm({ form, set, accounts, categories, onSave, onCancel }) {
       {/* Ligne 2 : Type + Montant + Frais/Categorie */}
       <div className="grid grid-cols-3 gap-2">
         <div>
-          <label className="block text-xs text-muted mb-1">Type</label>
+          <label className="block text-xs text-muted mb-1">{t('common.type')}</label>
           <Select value={form.type} onChange={e => { set('type', e.target.value); set('linked_account_id', '') }}>
-            <option value="DEBIT">Debit</option>
-            <option value="CREDIT">Credit</option>
+            <option value="DEBIT">{t('common.debit')}</option>
+            <option value="CREDIT">{t('common.credit')}</option>
           </Select>
         </div>
         <div>
-          <label className="block text-xs text-muted mb-1">Montant (FCFA)</label>
+          <label className="block text-xs text-muted mb-1">{t('tx.amountFcfa')}</label>
           <Input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="0" min="0" />
         </div>
         <div>
           {isTransfer ? (
             <>
-              <label className="block text-xs text-muted mb-1">Frais</label>
+              <label className="block text-xs text-muted mb-1">{t('controls.fees')}</label>
               <Input type="number" value={form.fees} onChange={e => set('fees', e.target.value)} placeholder="0" min="0" />
             </>
           ) : (
             <>
-              <label className="block text-xs text-muted mb-1">Categorie</label>
+              <label className="block text-xs text-muted mb-1">{t('common.category')}</label>
               <Select value={form.category_id} onChange={e => set('category_id', e.target.value)}>
-                <option value="">Sans categorie</option>
+                <option value="">{t('forecast.noCategory')}</option>
                 {filteredCats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </Select>
             </>
@@ -86,27 +88,28 @@ function TxForm({ form, set, accounts, categories, onSave, onCancel }) {
       {/* Ligne 3 : Date + Description */}
       <div className="grid grid-cols-3 gap-2">
         <div>
-          <label className="block text-xs text-muted mb-1">Date</label>
+          <label className="block text-xs text-muted mb-1">{t('common.date')}</label>
           <Input type="date" value={form.date} onChange={e => set('date', e.target.value)} />
         </div>
         <div className="col-span-2">
-          <label className="block text-xs text-muted mb-1">Description</label>
-          <Input value={form.description} onChange={e => set('description', e.target.value)} placeholder="Optionnel..." />
+          <label className="block text-xs text-muted mb-1">{t('common.description')}</label>
+          <Input value={form.description} onChange={e => set('description', e.target.value)} placeholder={t('common.optional')} />
         </div>
       </div>
 
       <div className="flex gap-2 pt-1">
         <Button onClick={onSave} disabled={!form.amount || !form.account_id} className="flex-1">
           {!form._id && <Plus size={13} />}
-          {form._id ? 'Sauvegarder' : 'Ajouter'}
+          {form._id ? t('forecast.saveTx') : t('common.add')}
         </Button>
-        <Button variant="secondary" onClick={onCancel} className="flex-1">Annuler</Button>
+        <Button variant="secondary" onClick={onCancel} className="flex-1">{t('common.cancel')}</Button>
       </div>
     </div>
   )
 }
 
 function SessionDetail({ session, accounts, categories, defaultAccountId, onChanged }) {
+  const t = useT()
   const { data, loading, refetch } = useAsync(
     () => window.api.forecast.getSession(session.id), [session.id]
   )
@@ -151,7 +154,7 @@ function SessionDetail({ session, accounts, categories, defaultAccountId, onChan
   const removeTx = async id => { await window.api.transactions.remove(id); refetch() }
 
   const validate = async () => {
-    if (!confirm('Valider ? Les transactions deviennent reelles et irreversibles.')) return
+    if (!confirm(t('forecast.confirmValidate'))) return
     await window.api.forecast.validateSession(session.id)
     onChanged()
   }
@@ -174,7 +177,7 @@ function SessionDetail({ session, accounts, categories, defaultAccountId, onChan
         </div>
         {!isValidated && txs.length > 0 && (
           <Button size="sm" variant="success" onClick={validate}>
-            <CheckCircle size={12} />Valider
+            <CheckCircle size={12} />{t('forecast.validate')}
           </Button>
         )}
       </div>
@@ -182,7 +185,7 @@ function SessionDetail({ session, accounts, categories, defaultAccountId, onChan
       {/* Liste des transactions */}
       {loading ? <Spinner /> : txs.length === 0 ? (
         <p className="text-xs text-faint text-center py-3 border border-dashed border-edge rounded-lg">
-          Aucune transaction — ajoute-en une ci-dessous
+          {t('forecast.noTx')}
         </p>
       ) : (
         <div className="space-y-1">
@@ -220,7 +223,7 @@ function SessionDetail({ session, accounts, categories, defaultAccountId, onChan
               onClick={() => setForm(emptyTx(accounts, defaultAccountId))}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed border-edge text-muted hover:border-primary hover:text-primary transition-colors text-sm"
             >
-              <Plus size={14} />Ajouter une transaction
+              <Plus size={14} />{t('forecast.addTx')}
             </button>
           )
       )}
@@ -229,12 +232,13 @@ function SessionDetail({ session, accounts, categories, defaultAccountId, onChan
 }
 
 export function ForecastModal({ isOpen, onClose, onSave, accounts, categories, defaultAccountId }) {
+  const t = useT()
   const { data: sessions, loading, refetch } = useAsync(() => window.api.forecast.getSessions())
   const [expanded, setExpanded] = useState(null)
 
   const createSimulation = async () => {
     const n = (sessions?.length || 0) + 1
-    const s = await window.api.forecast.createSession({ name: `Simulation ${n}`, description: '' })
+    const s = await window.api.forecast.createSession({ name: t('forecast.sessionName', { n }), description: '' })
     await refetch()
     setExpanded(s.id)
     onSave()
@@ -242,7 +246,7 @@ export function ForecastModal({ isOpen, onClose, onSave, accounts, categories, d
 
   const deleteSession = async (e, id) => {
     e.stopPropagation()
-    if (!confirm('Supprimer cette simulation et toutes ses transactions ?')) return
+    if (!confirm(t('forecast.confirmDelete'))) return
     await window.api.forecast.deleteSession(id)
     if (expanded === id) setExpanded(null)
     refetch(); onSave()
@@ -251,7 +255,7 @@ export function ForecastModal({ isOpen, onClose, onSave, accounts, categories, d
   const SIM_COLORS = ['#F59E0B','#818CF8','#34D399','#F472B6','#60A5FA','#FB923C']
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Simulations" wide>
+    <Modal isOpen={isOpen} onClose={onClose} title={t('forecast.title')} wide>
       <div className="space-y-3 max-h-[78vh] overflow-y-auto pr-1">
 
         {/* Bouton creation */}
@@ -260,15 +264,15 @@ export function ForecastModal({ isOpen, onClose, onSave, accounts, categories, d
           className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 hover:border-primary transition-all text-sm font-medium"
         >
           <GitBranch size={15} />
-          Nouvelle simulation
+          {t('forecast.new')}
         </button>
 
         {/* Liste */}
         {loading ? <Spinner /> : (sessions || []).length === 0 ? (
           <div className="text-center py-10 space-y-2">
             <GitBranch size={28} className="mx-auto text-faint" />
-            <p className="text-faint text-sm">Aucune simulation pour l'instant</p>
-            <p className="text-faint text-xs">Cree une simulation pour explorer des scenarios alternatifs</p>
+            <p className="text-faint text-sm">{t('forecast.emptyTitle')}</p>
+            <p className="text-faint text-xs">{t('forecast.emptyHint')}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -293,8 +297,8 @@ export function ForecastModal({ isOpen, onClose, onSave, accounts, categories, d
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-ink">{s.name}</p>
                       <p className="text-xs text-muted">
-                        {fmtDate(s.created_at)} · {s.tx_count} transaction{s.tx_count !== 1 ? 's' : ''}
-                        {s.validated_at ? ' · Validee' : ''}
+                        {fmtDate(s.created_at)} · {t(s.tx_count !== 1 ? 'forecast.txMany' : 'forecast.txOne', { n: s.tx_count })}
+                        {s.validated_at ? ` · ${t('forecast.validated')}` : ''}
                       </p>
                     </div>
                     <span className={`text-sm font-bold shrink-0 ${s.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -302,7 +306,7 @@ export function ForecastModal({ isOpen, onClose, onSave, accounts, categories, d
                     </span>
                     {s.validated_at ? (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-900/30 text-emerald-400 font-medium ml-1">
-                        Validee
+                        {t('forecast.validated')}
                       </span>
                     ) : (
                       <button onClick={e => deleteSession(e, s.id)}

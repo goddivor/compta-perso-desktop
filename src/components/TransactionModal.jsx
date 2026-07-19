@@ -3,6 +3,7 @@ import { Modal } from './ui/Modal'
 import { Button } from './ui/Button'
 import { Field, Input, Select, Textarea } from './ui/Field'
 import { fmt, today } from '../utils/format'
+import { useT } from '../i18n'
 
 const emptyForm = {
   account_id: '', type: 'DEBIT', amount: '', fees: '', category_id: '',
@@ -10,6 +11,7 @@ const emptyForm = {
 }
 
 export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, categories, defaultAccountId }) {
+  const t = useT()
   const [form, setForm]           = useState(emptyForm)
   const [partnerTx, setPartnerTx] = useState(null)
   const [applyFeeRule, setApplyFeeRule] = useState(false)
@@ -125,26 +127,26 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
   }
 
   const modalTitle = wasTransfer
-    ? 'Modifier le transfert'
-    : tx ? 'Modifier la transaction' : 'Nouvelle transaction'
+    ? t('table.editTransfer')
+    : tx ? t('tx.editTitle') : t('tx.newTitle')
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={modalTitle}>
       <div className="space-y-4">
         {/* Ligne 1 : Compte + Source/Destination */}
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Compte">
+          <Field label={t('common.account')}>
             <Select value={form.account_id} onChange={e => set('account_id', e.target.value)}>
-              <option value="">— Choisir —</option>
+              <option value="">{t('common.choose')}</option>
               {(accounts || []).map(a => (
                 <option key={a.id} value={a.id}>{a.name}{a.provider ? ` (${a.provider})` : ''}</option>
               ))}
             </Select>
           </Field>
           {form.account_id ? (
-            <Field label={form.type === 'CREDIT' ? 'Source (compte)' : 'Destination (compte)'}>
+            <Field label={form.type === 'CREDIT' ? t('tx.sourceAccount') : t('tx.destAccount')}>
               <Select value={form.linked_account_id} onChange={e => set('linked_account_id', e.target.value)}>
-                <option value="">Externe / Aucune</option>
+                <option value="">{t('tx.externalNone')}</option>
                 {otherAccounts.map(a => (
                   <option key={a.id} value={a.id}>{a.name}{a.provider ? ` (${a.provider})` : ''}</option>
                 ))}
@@ -155,20 +157,20 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
 
         {/* Ligne 2 : Type + Montant */}
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Type">
+          <Field label={t('common.type')}>
             <Select value={form.type} onChange={e => set('type', e.target.value)}>
-              <option value="DEBIT">Débit (dépense)</option>
-              <option value="CREDIT">Crédit (entrée)</option>
+              <option value="DEBIT">{t('tx.debitExpense')}</option>
+              <option value="CREDIT">{t('tx.creditIncome')}</option>
             </Select>
           </Field>
-          <Field label="Montant (FCFA)">
+          <Field label={t('tx.amountFcfa')}>
             <Input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="0" min="0" />
           </Field>
         </div>
 
         {/* Frais + case à cocher règle auto */}
         <div className="space-y-1.5">
-          <Field label={`Frais${isTransfer ? ' de transfert' : ''} (FCFA)`}>
+          <Field label={isTransfer ? t('tx.transferFeesFcfa') : t('tx.feesFcfa')}>
             <Input
               type="number"
               value={applyFeeRule && feeRate != null ? String(autoFees) : form.fees}
@@ -187,7 +189,7 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
                 <span className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white transition-all ${applyFeeRule ? 'left-3.5' : 'left-0.5'}`} />
               </div>
               <span className="text-xs text-muted">
-                Appliquer la règle de frais{' '}
+                {t('tx.applyFeeRule')}{' '}
                 <span className="text-primary font-medium">{feeRate}%</span>
                 {baseAmount > 0 && (
                   <span className="text-faint ml-1">→ {fmt(autoFees)} FCFA</span>
@@ -200,8 +202,8 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
         {/* Récap total si frais */}
         {feesAmt > 0 && baseAmount > 0 && form.type === 'DEBIT' && !isTransfer && (
           <p className="text-xs text-muted -mt-2">
-            Total débité : <span className="text-rose-400 font-medium">{fmt(totalDebit)}</span>
-            <span className="text-faint ml-1">(dont {fmt(feesAmt)} frais)</span>
+            {t('tx.totalDebited')} <span className="text-rose-400 font-medium">{fmt(totalDebit)}</span>
+            <span className="text-faint ml-1">{t('tx.inclFees', { x: fmt(feesAmt) })}</span>
           </p>
         )}
 
@@ -211,12 +213,12 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
             {form.type === 'CREDIT' && sourceAccount && (
               <>
                 <p className="text-muted">
-                  Débit <span style={{ color: sourceAccount.color }} className="font-medium">{sourceAccount.name}</span>
+                  {t('common.debit')} <span style={{ color: sourceAccount.color }} className="font-medium">{sourceAccount.name}</span>
                   {' '}: <span className="text-rose-400 font-medium">-{fmt(totalDebit)}</span>
-                  {feesAmt > 0 && <span className="text-xs text-faint ml-1">(dont {fmt(feesAmt)} frais)</span>}
+                  {feesAmt > 0 && <span className="text-xs text-faint ml-1">{t('tx.inclFees', { x: fmt(feesAmt) })}</span>}
                 </p>
                 <p className="text-muted">
-                  Crédit <span style={{ color: currentAccount?.color }} className="font-medium">{currentAccount?.name}</span>
+                  {t('common.credit')} <span style={{ color: currentAccount?.color }} className="font-medium">{currentAccount?.name}</span>
                   {' '}: <span className="text-emerald-400 font-medium">+{fmt(baseAmount)}</span>
                 </p>
               </>
@@ -224,12 +226,12 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
             {form.type === 'DEBIT' && destAccount && (
               <>
                 <p className="text-muted">
-                  Débit <span style={{ color: currentAccount?.color }} className="font-medium">{currentAccount?.name}</span>
+                  {t('common.debit')} <span style={{ color: currentAccount?.color }} className="font-medium">{currentAccount?.name}</span>
                   {' '}: <span className="text-rose-400 font-medium">-{fmt(totalDebit)}</span>
-                  {feesAmt > 0 && <span className="text-xs text-faint ml-1">(dont {fmt(feesAmt)} frais)</span>}
+                  {feesAmt > 0 && <span className="text-xs text-faint ml-1">{t('tx.inclFees', { x: fmt(feesAmt) })}</span>}
                 </p>
                 <p className="text-muted">
-                  Crédit <span style={{ color: destAccount.color }} className="font-medium">{destAccount.name}</span>
+                  {t('common.credit')} <span style={{ color: destAccount.color }} className="font-medium">{destAccount.name}</span>
                   {' '}: <span className="text-emerald-400 font-medium">+{fmt(baseAmount)}</span>
                 </p>
               </>
@@ -238,27 +240,27 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Date">
+          <Field label={t('common.date')}>
             <Input type="date" value={form.date} onChange={e => set('date', e.target.value)} />
           </Field>
-          <Field label="Catégorie">
+          <Field label={t('common.category')}>
             <Select value={form.category_id} onChange={e => set('category_id', e.target.value)}>
-              <option value="">— Sans catégorie —</option>
+              <option value="">{t('tx.noCategory')}</option>
               {filteredCats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </Select>
           </Field>
         </div>
 
-        <Field label="Description">
-          <Textarea rows={2} value={form.description} onChange={e => set('description', e.target.value)} placeholder="Optionnel..." />
+        <Field label={t('common.description')}>
+          <Textarea rows={2} value={form.description} onChange={e => set('description', e.target.value)} placeholder={t('common.optional')} />
         </Field>
 
         <div className="flex gap-2 pt-1">
-          <Button variant="secondary" onClick={onClose} className="flex-1">Annuler</Button>
+          <Button variant="secondary" onClick={onClose} className="flex-1">{t('common.cancel')}</Button>
           <Button onClick={save} disabled={!valid} className="flex-1">
             {isTransfer
-              ? (tx ? 'Modifier le transfert' : 'Créer le transfert')
-              : 'Enregistrer'}
+              ? (tx ? t('table.editTransfer') : t('tx.createTransfer'))
+              : t('common.save')}
           </Button>
         </div>
       </div>

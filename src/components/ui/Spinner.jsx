@@ -6,7 +6,7 @@ export function Spinner() {
   )
 }
 
-export function Empty({ label = 'Aucune donnee' }) {
+export function Empty({ label = '—' }) {
   return (
     <div className="flex items-center justify-center h-32 text-faint text-sm">
       {label}

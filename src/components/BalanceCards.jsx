@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react'
 import { fmt } from '../utils/format'
+import { useT } from '../i18n'
 import { Plus, Settings, Cloud } from 'lucide-react'
 
 const LONG_PRESS_MS = 400
 
 export function BalanceCards({ summary, selectedAccount, onSelectAccount, onAddAccount, onSettings, onSync, onReorder }) {
+  const t = useT()
   const rawAccounts = summary?.accounts || []
   const total = (summary?.total_electronic ?? 0) + (summary?.total_physical ?? 0)
 
@@ -101,7 +103,7 @@ export function BalanceCards({ summary, selectedAccount, onSelectAccount, onAddA
             !selectedAccount ? 'bg-primary/10 border-b-2 border-b-primary' : 'hover:bg-surface2/60'
           }`}
         >
-          <span className="text-xs text-muted mb-1">Total global</span>
+          <span className="text-xs text-muted mb-1">{t('balance.total')}</span>
           <span className="text-lg font-bold text-ink">{fmt(total)}</span>
         </button>
 
@@ -151,14 +153,14 @@ export function BalanceCards({ summary, selectedAccount, onSelectAccount, onAddA
           className="shrink-0 flex items-center gap-1.5 px-4 py-4 text-faint hover:text-content hover:bg-surface2/60 transition-colors border-r border-edge"
         >
           <Plus size={14} />
-          <span className="text-xs">Compte</span>
+          <span className="text-xs">{t('balance.addAccount')}</span>
         </button>
 
         <div className="flex-1" />
 
         <button
           onClick={onSync}
-          title="Synchronisation cloud"
+          title={t('balance.sync')}
           className="shrink-0 flex items-center px-3 text-faint hover:text-content hover:bg-surface2/60 transition-colors"
         >
           <Cloud size={15} />
@@ -166,6 +168,7 @@ export function BalanceCards({ summary, selectedAccount, onSelectAccount, onAddA
 
         <button
           onClick={onSettings}
+          title={t('balance.settings')}
           className="shrink-0 flex items-center px-4 text-faint hover:text-content hover:bg-surface2/60 transition-colors"
         >
           <Settings size={15} />

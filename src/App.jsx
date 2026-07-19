@@ -13,10 +13,12 @@ import { FeeRuleModal } from './components/FeeRuleModal'
 import { SyncModal } from './components/SyncModal'
 import { DailyReport } from './components/DailyReport'
 import { Spinner } from './components/ui/Spinner'
+import { useT } from './i18n'
 
 const emptyFilters = { account_id: '', type: '', category_id: '', date_from: '', date_to: '' }
 
 export default function App() {
+  const t = useT()
   const [filters, setFilters] = useState(emptyFilters)
   const [showForecast, setShowForecast] = useState(false)
   const [viewMode, setViewMode] = useState('tableau')
@@ -70,15 +72,15 @@ export default function App() {
     <div className="h-screen flex flex-col bg-base text-ink overflow-hidden">
       {updateInfo && (
         <div className="flex items-center justify-center gap-3 px-4 py-1.5 bg-primary/10 border-b border-primary/30 text-xs text-content">
-          <span>Mise à jour v{updateInfo.version} disponible</span>
+          <span>{t('app.updateAvailable', { version: updateInfo.version })}</span>
           <button
             onClick={() => { setUpdateInfo(null); openModal('settings') }}
             className="font-semibold text-primary hover:underline">
-            Ouvrir les réglages
+            {t('app.openSettings')}
           </button>
           <button
             onClick={() => setUpdateInfo(null)}
-            title="Ignorer"
+            title={t('app.dismiss')}
             className="text-muted hover:text-ink transition-colors">
             ✕
           </button>
@@ -123,7 +125,7 @@ export default function App() {
                 accounts={accounts || []}
                 onEdit={tx => openModal('tx', tx)}
                 onDelete={async id => {
-                  if (!confirm('Supprimer cette transaction ?')) return
+                  if (!confirm(t('app.confirmDeleteTx'))) return
                   await window.api.transactions.remove(id)
                   refetch()
                 }}

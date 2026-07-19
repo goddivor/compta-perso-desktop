@@ -1,17 +1,16 @@
 import { useAsync } from '../hooks/useAsync'
 import { fmt } from '../utils/format'
 import { Spinner } from './ui/Spinner'
+import { useI18n } from '../i18n'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
-const DAYS_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
-const MONTHS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
-
-function formatDay(dateStr) {
+function formatDay(dateStr, locale) {
   const d = new Date(dateStr + 'T00:00:00')
-  return `${DAYS_FR[d.getDay()]} ${d.getDate()} ${MONTHS_FR[d.getMonth()]} ${d.getFullYear()}`
+  return d.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 export function DailyReport({ filters, tick }) {
+  const { t, locale } = useI18n()
   const params = {}
   if (filters.account_id)  params.account_id = Number(filters.account_id)
   if (filters.date_from)   params.date_from  = filters.date_from
@@ -35,7 +34,7 @@ export function DailyReport({ filters, tick }) {
   if (!rows.length) return (
     <div className="flex flex-col items-center justify-center h-full gap-2 text-faint">
       <Minus size={28} />
-      <p className="text-sm">Aucune transaction sur la période</p>
+      <p className="text-sm">{t('report.empty')}</p>
     </div>
   )
 
@@ -44,19 +43,19 @@ export function DailyReport({ filters, tick }) {
       {/* Bande récap en haut */}
       <div className="shrink-0 flex items-center gap-0 border-b border-edge bg-surface">
         <div className="flex flex-col px-6 py-3 border-r border-edge">
-          <span className="text-xs text-muted mb-0.5">{rows.length} jour{rows.length > 1 ? 's' : ''}</span>
-          <span className="text-sm font-semibold text-content">{rows.reduce((s, r) => s + r.tx_count, 0)} transactions</span>
+          <span className="text-xs text-muted mb-0.5">{t(rows.length > 1 ? 'report.days' : 'report.day', { n: rows.length })}</span>
+          <span className="text-sm font-semibold text-content">{t('report.txTotal', { n: rows.reduce((s, r) => s + r.tx_count, 0) })}</span>
         </div>
         <div className="flex flex-col px-6 py-3 border-r border-edge">
-          <span className="text-xs text-muted mb-0.5">Total entré</span>
+          <span className="text-xs text-muted mb-0.5">{t('report.totalIn')}</span>
           <span className="text-sm font-bold text-emerald-400">+{fmt(totalCredit)}</span>
         </div>
         <div className="flex flex-col px-6 py-3 border-r border-edge">
-          <span className="text-xs text-muted mb-0.5">Total sorti</span>
+          <span className="text-xs text-muted mb-0.5">{t('report.totalOut')}</span>
           <span className="text-sm font-bold text-rose-400">-{fmt(totalDebit)}</span>
         </div>
         <div className="flex flex-col px-6 py-3">
-          <span className="text-xs text-muted mb-0.5">Bilan net</span>
+          <span className="text-xs text-muted mb-0.5">{t('report.netBalance')}</span>
           <span className={`text-sm font-bold ${totalNet >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
             {totalNet >= 0 ? '+' : ''}{fmt(totalNet)}
           </span>
@@ -68,11 +67,11 @@ export function DailyReport({ filters, tick }) {
         <table className="w-full">
           <thead className="sticky top-0 bg-base z-10">
             <tr className="border-b border-edge text-xs text-muted uppercase tracking-wide">
-              <th className="text-left px-6 py-2.5 font-medium">Date</th>
-              <th className="text-right px-4 py-2.5 font-medium text-emerald-600">Entré</th>
-              <th className="text-right px-4 py-2.5 font-medium text-rose-600">Sorti</th>
-              <th className="text-right px-6 py-2.5 font-medium">Bilan</th>
-              <th className="text-right px-6 py-2.5 font-medium">Transactions</th>
+              <th className="text-left px-6 py-2.5 font-medium">{t('common.date')}</th>
+              <th className="text-right px-4 py-2.5 font-medium text-emerald-600">{t('report.colIn')}</th>
+              <th className="text-right px-4 py-2.5 font-medium text-rose-600">{t('report.colOut')}</th>
+              <th className="text-right px-6 py-2.5 font-medium">{t('report.colNet')}</th>
+              <th className="text-right px-6 py-2.5 font-medium">{t('report.colTx')}</th>
             </tr>
           </thead>
           <tbody>
@@ -81,7 +80,7 @@ export function DailyReport({ filters, tick }) {
               return (
                 <tr key={row.day} className="border-b border-edge/50 hover:bg-surface2/60 transition-colors group">
                   <td className="px-6 py-3">
-                    <span className="text-sm text-content font-medium">{formatDay(row.day)}</span>
+                    <span className="text-sm text-content font-medium">{formatDay(row.day, locale)}</span>
                   </td>
                   <td className="px-4 py-3 text-right">
                     {row.total_credit > 0 ? (

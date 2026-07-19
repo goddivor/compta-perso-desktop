@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Select, Input } from './ui/Field'
 import { Button } from './ui/Button'
+import { useT } from '../i18n'
 import { Plus, ArrowLeftRight, TrendingUp, Table2, GitBranch, SlidersHorizontal, X, AlignStartVertical, AlignStartHorizontal, CalendarDays, Percent } from 'lucide-react'
 
 const hasActiveFilters = f => f.type || f.category_id || f.date_from || f.date_to
@@ -13,6 +14,7 @@ export function Controls({
   categories, accounts,
   onAddTx, onTransfer, onForecast, onFeeRule,
 }) {
+  const t = useT()
   const [showFilters, setShowFilters] = useState(false)
   const active = hasActiveFilters(filters)
 
@@ -30,15 +32,15 @@ export function Controls({
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={onAddTx}>
             <Plus size={13} />
-            Transaction
+            {t('controls.transaction')}
           </Button>
           <Button size="sm" variant="secondary" onClick={onTransfer}>
             <ArrowLeftRight size={13} />
-            Retrait
+            {t('controls.withdrawal')}
           </Button>
           <Button size="sm" variant="secondary" onClick={onForecast}>
             <TrendingUp size={13} />
-            Simulations
+            {t('controls.simulations')}
           </Button>
         </div>
 
@@ -56,7 +58,7 @@ export function Controls({
           }`}
         >
           <SlidersHorizontal size={13} />
-          Filtres
+          {t('controls.filters')}
           {active && (
             <span className="bg-primary text-primaryInk rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">
               {[filters.type, filters.category_id, filters.date_from, filters.date_to].filter(Boolean).length}
@@ -70,7 +72,7 @@ export function Controls({
             className="flex items-center gap-1 text-xs text-faint hover:text-content transition-colors"
           >
             <X size={11} />
-            Effacer
+            {t('controls.clear')}
           </button>
         )}
 
@@ -81,7 +83,7 @@ export function Controls({
           return (
             <button
               onClick={() => onFeeRule?.(acct)}
-              title={hasRule ? `Règle de frais : ${acct.fees_rate}%` : 'Définir une règle de frais'}
+              title={hasRule ? t('controls.feeRuleCurrent', { rate: acct.fees_rate }) : t('controls.feeRuleDefine')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
                 hasRule
                   ? 'border-amber-500/50 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20'
@@ -89,7 +91,7 @@ export function Controls({
               }`}
             >
               <Percent size={12} />
-              {hasRule ? `${acct.fees_rate}%` : 'Frais'}
+              {hasRule ? `${acct.fees_rate}%` : t('controls.fees')}
             </button>
           )
         })()}
@@ -104,7 +106,7 @@ export function Controls({
           >
             <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${showForecast ? 'left-4' : 'left-0.5'}`} />
           </div>
-          Previsionnel
+          {t('controls.forecast')}
         </label>
 
         <div className="w-px h-5 bg-surface2" />
@@ -117,7 +119,7 @@ export function Controls({
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${
                 graphLayout === 'vertical' ? 'bg-edge text-ink' : 'text-muted hover:text-content'
               }`}
-              title="Vue verticale"
+              title={t('controls.verticalView')}
             >
               <AlignStartVertical size={13} />
             </button>
@@ -126,7 +128,7 @@ export function Controls({
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${
                 graphLayout === 'horizontal' ? 'bg-edge text-ink' : 'text-muted hover:text-content'
               }`}
-              title="Vue horizontale"
+              title={t('controls.horizontalView')}
             >
               <AlignStartHorizontal size={13} />
             </button>
@@ -142,7 +144,7 @@ export function Controls({
             }`}
           >
             <Table2 size={13} />
-            Tableau
+            {t('controls.table')}
           </button>
           <button
             onClick={() => setViewMode('graphe')}
@@ -151,7 +153,7 @@ export function Controls({
             }`}
           >
             <GitBranch size={13} />
-            Graphe
+            {t('controls.graph')}
           </button>
           <button
             onClick={() => setViewMode('rapport')}
@@ -160,7 +162,7 @@ export function Controls({
             }`}
           >
             <CalendarDays size={13} />
-            Rapport
+            {t('controls.report')}
           </button>
         </div>
       </div>
@@ -173,9 +175,9 @@ export function Controls({
             onChange={e => setF('type', e.target.value)}
             className="bg-surface2 border border-edge rounded-lg px-2 py-1.5 text-ink text-xs focus:outline-none focus:border-primary"
           >
-            <option value="">Tous types</option>
-            <option value="CREDIT">Credit</option>
-            <option value="DEBIT">Debit</option>
+            <option value="">{t('controls.allTypes')}</option>
+            <option value="CREDIT">{t('common.credit')}</option>
+            <option value="DEBIT">{t('common.debit')}</option>
           </select>
 
           <select
@@ -183,20 +185,20 @@ export function Controls({
             onChange={e => setF('category_id', e.target.value)}
             className="bg-surface2 border border-edge rounded-lg px-2 py-1.5 text-ink text-xs focus:outline-none focus:border-primary"
           >
-            <option value="">Toutes categories</option>
+            <option value="">{t('controls.allCategories')}</option>
             {(categories || []).map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
 
-          <span className="text-xs text-faint">Du</span>
+          <span className="text-xs text-faint">{t('controls.dateFrom')}</span>
           <input
             type="date"
             value={filters.date_from}
             onChange={e => setF('date_from', e.target.value)}
             className="bg-surface2 border border-edge rounded-lg px-2 py-1.5 text-ink text-xs focus:outline-none focus:border-primary"
           />
-          <span className="text-xs text-faint">au</span>
+          <span className="text-xs text-faint">{t('controls.dateTo')}</span>
           <input
             type="date"
             value={filters.date_to}

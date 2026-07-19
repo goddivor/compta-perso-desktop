@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useMemo } from 'react'
 import { fmt, fmtDate } from '../utils/format'
+import { useT } from '../i18n'
 
 const NODE_W  = 172
 const NODE_H  = 74
@@ -108,7 +109,7 @@ function drawTransferLinks(ctx, nodes) {
 
 const V = { PAD_X: 30, PAD_Y: 54, COL_W: 220, SIM_COL: 190, ROW_H: 118, SIM_ROW_H: 110 }
 
-function drawVertical(ctx, canvas, realSeries, simBranches, nodesRef) {
+function drawVertical(ctx, canvas, realSeries, simBranches, nodesRef, t) {
   let xCursor = V.PAD_X
   const simCountPerAccount = {}
   simBranches.forEach(sim =>
@@ -163,7 +164,7 @@ function drawVertical(ctx, canvas, realSeries, simBranches, nodesRef) {
   ctx.beginPath(); ctx.moveTo(V.PAD_X, divY); ctx.lineTo(canvas.width - V.PAD_X, divY); ctx.stroke()
   ctx.setLineDash([])
   ctx.font = '10px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#807669'
-  ctx.fillText('— routes alternatives —', canvas.width / 2, divY + 14)
+  ctx.fillText(t('graph.altRoutes'), canvas.width / 2, divY + 14)
 
   const simStartY = divY + 30
   const simIdxPerAccount = {}
@@ -176,7 +177,7 @@ function drawVertical(ctx, canvas, realSeries, simBranches, nodesRef) {
       simIdxPerAccount[accountId] = idx + 1
       const cx = realColX[colIdx] + V.COL_W / 2 + idx * V.SIM_COL + V.SIM_COL / 2
       ctx.font = 'bold 11px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = simColor
-      ctx.fillText(`Sim ${simIdx + 1} · ${account.name}`, cx, simStartY - 6)
+      ctx.fillText(t('graph.sim', { n: simIdx + 1, name: account.name }), cx, simStartY - 6)
       const forkY = V.PAD_Y + (realSeries[colIdx].points.length - 1) * V.ROW_H + NODE_H / 2
       ctx.beginPath(); ctx.arc(realColX[colIdx], forkY, 5, 0, Math.PI * 2)
       ctx.fillStyle = simColor; ctx.fill()
@@ -196,7 +197,7 @@ function drawVertical(ctx, canvas, realSeries, simBranches, nodesRef) {
 
 const H = { PAD_X: 20, PAD_Y: 30, LABEL_W: 82, NODE_STEP: 210, ROW_H: 114, SIM_ROW_H: 108 }
 
-function drawHorizontal(ctx, canvas, realSeries, simBranches, nodesRef) {
+function drawHorizontal(ctx, canvas, realSeries, simBranches, nodesRef, t) {
   const maxRealCols = Math.max(1, ...realSeries.map(s => s.points.length))
   const maxSimCols  = simBranches.length > 0
     ? Math.max(...simBranches.flatMap(s => s.branches.map(b => b.points.length))) : 0
@@ -248,7 +249,7 @@ function drawHorizontal(ctx, canvas, realSeries, simBranches, nodesRef) {
   ctx.beginPath(); ctx.moveTo(H.PAD_X, divY); ctx.lineTo(canvas.width - H.PAD_X, divY); ctx.stroke()
   ctx.setLineDash([])
   ctx.font = '10px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#807669'
-  ctx.fillText('— routes alternatives —', canvas.width / 2, divY + 13)
+  ctx.fillText(t('graph.altRoutes'), canvas.width / 2, divY + 13)
 
   const simBaseY = divY + 26
   let simRowIdx = 0
@@ -262,7 +263,7 @@ function drawHorizontal(ctx, canvas, realSeries, simBranches, nodesRef) {
 
       // Label
       ctx.font = 'bold 10px system-ui,sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = simColor
-      ctx.fillText(`Sim ${simIdx + 1} · ${account.name}`, H.PAD_X + H.LABEL_W - 10, cy + 4)
+      ctx.fillText(t('graph.sim', { n: simIdx + 1, name: account.name }), H.PAD_X + H.LABEL_W - 10, cy + 4)
 
       // Fork indicator on bottom edge of last real node
       const lastRealCx = nodeX(realSeries[colIdx].points.length - 1)
@@ -288,6 +289,7 @@ function drawHorizontal(ctx, canvas, realSeries, simBranches, nodesRef) {
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function GraphView({ transactions, accounts, layout = 'vertical' }) {
+  const t = useT()
   const scrollRef = useRef()
   const canvasRef = useRef()
   const nodesRef  = useRef([])
@@ -301,10 +303,10 @@ export function GraphView({ transactions, accounts, layout = 'vertical' }) {
         .filter(t => t.account_id === account.id && !t.forecast_session_id)
         .sort((a, b) => new Date(a.date) - new Date(b.date) || a.id - b.id)
       let bal = account.initial_balance
-      const points = [{ date: account.created_at || new Date().toISOString(), balance: bal, label: 'Solde initial', tx: null }]
+      const points = [{ date: account.created_at || new Date().toISOString(), balance: bal, label: t('graph.initialBalance'), tx: null }]
       for (const tx of txs) {
         bal += tx.type === 'CREDIT' ? tx.amount : -tx.amount
-        points.push({ date: tx.date, balance: bal, label: tx.description || tx.category_name || (tx.type === 'CREDIT' ? 'Credit' : 'Debit'), tx })
+        points.push({ date: tx.date, balance: bal, label: tx.description || tx.category_name || (tx.type === 'CREDIT' ? t('common.credit') : t('common.debit')), tx })
       }
       return { account, points }
     })
@@ -322,7 +324,7 @@ export function GraphView({ transactions, accounts, layout = 'vertical' }) {
         let bal = realSer ? realSer.points[realSer.points.length - 1].balance : account.initial_balance
         const points = sessionTxs.filter(t => t.account_id === accountId).map(tx => {
           bal += tx.type === 'CREDIT' ? tx.amount : -tx.amount
-          return { date: tx.date, balance: bal, label: tx.description || tx.category_name || (tx.type === 'CREDIT' ? 'Credit' : 'Debit'), tx }
+          return { date: tx.date, balance: bal, label: tx.description || tx.category_name || (tx.type === 'CREDIT' ? t('common.credit') : t('common.debit')), tx }
         })
         return { account, points, accountId }
       }).filter(Boolean)
@@ -330,7 +332,7 @@ export function GraphView({ transactions, accounts, layout = 'vertical' }) {
     })
 
     return { realSeries, simBranches }
-  }, [transactions, accounts])
+  }, [transactions, accounts, t])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -339,11 +341,11 @@ export function GraphView({ transactions, accounts, layout = 'vertical' }) {
     nodesRef.current = []
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     if (layout === 'horizontal') {
-      drawHorizontal(ctx, canvas, realSeries, simBranches, nodesRef)
+      drawHorizontal(ctx, canvas, realSeries, simBranches, nodesRef, t)
     } else {
-      drawVertical(ctx, canvas, realSeries, simBranches, nodesRef)
+      drawVertical(ctx, canvas, realSeries, simBranches, nodesRef, t)
     }
-  }, [realSeries, simBranches, layout])
+  }, [realSeries, simBranches, layout, t])
 
   const onMouseMove = e => {
     const canvas = canvasRef.current
@@ -361,7 +363,7 @@ export function GraphView({ transactions, accounts, layout = 'vertical' }) {
   }
 
   if (!realSeries.length)
-    return <div className="flex items-center justify-center h-full text-faint text-sm">Aucune donnee a afficher</div>
+    return <div className="flex items-center justify-center h-full text-faint text-sm">{t('graph.empty')}</div>
 
   return (
     <div ref={scrollRef} className="w-full h-full overflow-auto bg-base">
@@ -370,7 +372,7 @@ export function GraphView({ transactions, accounts, layout = 'vertical' }) {
         <div className="fixed pointer-events-none bg-surface2 border border-edge rounded-lg px-3 py-2 text-xs shadow-xl z-50"
           style={{ left: tooltip.px + 14, top: tooltip.py - 60, minWidth: 160 }}>
           <p className="font-semibold mb-1" style={{ color: tooltip.simColor || tooltip.account.color }}>
-            {tooltip.account.name}{tooltip.simColor ? ' (simulation)' : ''}
+            {tooltip.account.name}{tooltip.simColor ? t('graph.simulation') : ''}
           </p>
           <p className="text-muted">{fmtDate(tooltip.point.date)}</p>
           <p className="text-content mt-0.5">{tooltip.point.label}</p>

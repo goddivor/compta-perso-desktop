@@ -3,9 +3,11 @@ import { Modal } from './ui/Modal'
 import { Button } from './ui/Button'
 import { Field, Input } from './ui/Field'
 import { fmt } from '../utils/format'
+import { useT } from '../i18n'
 import { Percent, Trash2 } from 'lucide-react'
 
 export function FeeRuleModal({ isOpen, onClose, onSave, account }) {
+  const t = useT()
   const [rate, setRate] = useState('')
 
   useEffect(() => {
@@ -46,20 +48,17 @@ export function FeeRuleModal({ isOpen, onClose, onSave, account }) {
   if (!account) return null
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Règle de frais — ${account.name}`}>
+    <Modal isOpen={isOpen} onClose={onClose} title={t('feeRule.title', { name: account.name })}>
       <div className="space-y-5">
-        <p className="text-sm text-muted">
-          Définissez un taux de frais automatique pour ce compte. Lors d'une transaction,
-          une case à cocher vous proposera d'appliquer les frais calculés.
-        </p>
+        <p className="text-sm text-muted">{t('feeRule.intro')}</p>
 
-        <Field label="Taux de frais (ex : 0.01 pour 1%)">
+        <Field label={t('feeRule.rateLabel')}>
           <div className="relative">
             <Input
               type="number"
               value={rate}
               onChange={e => setRate(e.target.value)}
-              placeholder="ex : 0.01"
+              placeholder={t('feeRule.ratePlaceholder')}
               min="0"
               step="0.001"
             />
@@ -70,19 +69,19 @@ export function FeeRuleModal({ isOpen, onClose, onSave, account }) {
         {hasRate && (
           <div className="bg-surface2 rounded-lg px-4 py-3 text-sm space-y-1">
             <p className="text-muted">
-              Pour <span className="text-content font-medium">10 000 FCFA</span>
-              {' '}→ frais = <span className="text-rose-400 font-medium">{fmt(example)}</span>
+              {t('feeRule.for')} <span className="text-content font-medium">{fmt(10000)}</span>
+              {' '}{t('feeRule.feesEq')} <span className="text-rose-400 font-medium">{fmt(example)}</span>
             </p>
             <p className="text-muted">
-              Pour <span className="text-content font-medium">50 000 FCFA</span>
-              {' '}→ frais = <span className="text-rose-400 font-medium">{fmt(Math.round(50000 * rateNum))}</span>
+              {t('feeRule.for')} <span className="text-content font-medium">{fmt(50000)}</span>
+              {' '}{t('feeRule.feesEq')} <span className="text-rose-400 font-medium">{fmt(Math.round(50000 * rateNum))}</span>
             </p>
           </div>
         )}
 
         {!hasRate && account.fees_rate != null && (
           <p className="text-xs text-primary">
-            Règle actuelle ({account.fees_rate}) — laisser vide pour supprimer.
+            {t('feeRule.current', { rate: account.fees_rate })}
           </p>
         )}
 
@@ -90,11 +89,11 @@ export function FeeRuleModal({ isOpen, onClose, onSave, account }) {
           {account.fees_rate != null && (
             <Button variant="danger" onClick={clear} className="flex-shrink-0 flex items-center gap-1.5">
               <Trash2 size={13} />
-              Supprimer
+              {t('common.delete')}
             </Button>
           )}
-          <Button variant="secondary" onClick={onClose} className="flex-1">Annuler</Button>
-          <Button onClick={save} className="flex-1">Enregistrer</Button>
+          <Button variant="secondary" onClick={onClose} className="flex-1">{t('common.cancel')}</Button>
+          <Button onClick={save} className="flex-1">{t('common.save')}</Button>
         </div>
       </div>
     </Modal>
