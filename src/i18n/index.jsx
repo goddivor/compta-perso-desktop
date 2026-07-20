@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from 'react'
+import { createContext, useContext, useMemo, useState, useCallback } from 'react'
 import { fr } from './fr'
 import { en } from './en'
 import { setFormatLocale } from '../utils/format'
@@ -27,24 +27,27 @@ export function I18nProvider({ children }) {
   // Applique la locale aux helpers de formatage avant le rendu des enfants
   setFormatLocale(locale)
 
-  const setLanguage = (next) => {
+  const setLanguage = useCallback((next) => {
     try { localStorage.setItem(STORAGE_KEY, next) } catch (_) {}
     setPref(next)
-  }
+  }, [])
 
-  const value = useMemo(() => {
-    const dict = DICTS[lang]
-    const t = (key, vars) => {
-      let s = dict[key] ?? DICTS.fr[key] ?? key
-      if (vars) {
-        for (const [k, v] of Object.entries(vars)) {
-          s = s.split(`{${k}}`).join(String(v))
-        }
+  // `t` ne dépend QUE du code langue : identité stable entre les rendus,
+  // recréée uniquement lors d'un vrai changement de langue.
+  const t = useCallback((key, vars) => {
+    let s = DICTS[lang][key] ?? DICTS.fr[key] ?? key
+    if (vars) {
+      for (const [k, v] of Object.entries(vars)) {
+        s = s.split(`{${k}}`).join(String(v))
       }
-      return s
     }
-    return { t, lang, locale, pref, setLanguage }
-  }, [lang, pref])
+    return s
+  }, [lang])
+
+  const value = useMemo(
+    () => ({ t, lang, locale, pref, setLanguage }),
+    [t, lang, locale, pref, setLanguage]
+  )
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
 }
