@@ -2,115 +2,158 @@ import { useRef, useEffect, useState, useMemo, useCallback } from 'react'
 import { Locate } from 'lucide-react'
 import { fmt, fmtDate } from '../utils/format'
 import { useT } from '../i18n'
-import { forceLayout } from '../graph/forceLayout'
 
 const SIM_COLORS = ['#F59E0B', '#818CF8', '#34D399', '#F472B6', '#60A5FA', '#FB923C']
 const MIN_R = 14
 const MAX_R = 30
+const HEADER_R = 16
 const MIN_ZOOM = 0.2
 const MAX_ZOOM = 4
 const ARROW_H = 7
+const COL_SPACING = 220 // horizontal distance between account columns
+const ROW_H = 90        // vertical distance between chronological rows
+const COL0_X = 150      // x of the first column center
+const HEADER_Y = 40     // y of the header nodes line
+const ROWS_TOP = 170    // y of the first transaction row
+const MARKER_X = 16     // x of the date markers in the left margin
 
-// ── Graph model ──────────────────────────────────────────────────────────────
+// ── Graph model: chronological columns ───────────────────────────────────────
+//
+// One vertical column per account (ordered as received: position, id), a
+// header node on a shared top line, then one global chronological row per
+// transaction (time flows downwards). Both entries of a transfer pair share
+// the same row and are linked by a yellow arrow (debit -> credit).
 
 function buildGraph(transactions, accounts, t) {
   if (!accounts?.length) return null
 
+  const colOf = new Map(accounts.map((a, i) => [a.id, i]))
+  const colX = i => COL0_X + i * COL_SPACING
+
   const nodes = []
   const edges = []
+  const markers = []
   const byId = new Map()
+  const addNode = n => { nodes.push(n); byId.set(n.id, n) }
 
-  const addNode = node => { nodes.push(node); byId.set(node.id, node) }
+  const txLabel = tx =>
+    tx.description || tx.category_name || (tx.type === 'CREDIT' ? t('common.credit') : t('common.debit'))
 
-  // Real chains: one "initial balance" node per account + one node per transaction
-  const lastRealId = {}
-  accounts.forEach((account, group) => {
-    const color = account.color || '#FFD200'
-    const txs = transactions
-      .filter(x => x.account_id === account.id && !x.forecast_session_id)
-      .sort((a, b) => new Date(a.date) - new Date(b.date) || a.id - b.id)
+  // Node radius: proportional to sqrt(amount), clamped to [MIN_R, MAX_R]
+  const shown = transactions.filter(x => colOf.has(x.account_id))
+  const maxAmount = Math.max(1, ...shown.map(x => Math.abs(x.amount)))
+  const radius = amount => MIN_R + (MAX_R - MIN_R) * Math.sqrt(Math.abs(amount) / maxAmount)
 
-    let bal = account.initial_balance
-    const initId = `init-${account.id}`
+  // Header nodes (account circle + name), all on the same horizontal line
+  accounts.forEach((account, i) => {
     addNode({
-      id: initId, group, order: 0, account, color,
-      point: { date: account.created_at || new Date().toISOString(), balance: bal, label: t('graph.initialBalance'), tx: null },
+      id: `head-${account.id}`, kind: 'header', account,
+      color: account.color || '#FFD200', r: HEADER_R,
+      x: colX(i), y: HEADER_Y,
+      point: {
+        date: account.created_at || new Date().toISOString(),
+        balance: account.initial_balance,
+        label: t('graph.initialBalance'),
+        tx: null,
+      },
     })
-    let prevId = initId
-    txs.forEach((tx, i) => {
-      bal += tx.type === 'CREDIT' ? tx.amount : -tx.amount
-      const id = `tx-${tx.id}`
-      addNode({
-        id, group, order: i + 1, account, color,
-        point: {
-          date: tx.date, balance: bal,
-          label: tx.description || tx.category_name || (tx.type === 'CREDIT' ? t('common.credit') : t('common.debit')),
-          tx,
-        },
-      })
-      edges.push({ source: prevId, target: id, chain: true, color, kind: 'chain' })
-      prevId = id
-    })
-    lastRealId[account.id] = prevId
   })
 
-  // Simulation branches (forecast sessions), forked from the last real node
-  const simTxs = transactions.filter(x => x.forecast_session_id)
+  // Real transactions, merged and sorted chronologically (date ASC, created_at ASC)
+  const real = shown
+    .filter(x => !x.forecast_session_id)
+    .sort((a, b) =>
+      new Date(a.date) - new Date(b.date) ||
+      new Date(a.created_at || 0) - new Date(b.created_at || 0) ||
+      a.id - b.id
+    )
+
+  const balances = new Map(accounts.map(a => [a.id, a.initial_balance]))
+  const lastNodeId = new Map(accounts.map(a => [a.id, `head-${a.id}`]))
+  const rowOf = new Map() // tx.id -> global row index
+  let row = 0
+  let prevDay = null
+
+  for (const tx of real) {
+    // Both entries of a transfer pair share the same row
+    const pairRow = tx.transfer_pair_id != null ? rowOf.get(tx.transfer_pair_id) : undefined
+    let r
+    if (pairRow != null) {
+      r = pairRow
+    } else {
+      r = row++
+      // Date marker in the left margin on each day change
+      const day = String(tx.date).slice(0, 10)
+      if (day !== prevDay) {
+        prevDay = day
+        markers.push({ y: ROWS_TOP + r * ROW_H, text: `${day.slice(8, 10)}/${day.slice(5, 7)}` })
+      }
+    }
+    rowOf.set(tx.id, r)
+
+    const bal = balances.get(tx.account_id) + (tx.type === 'CREDIT' ? tx.amount : -tx.amount)
+    balances.set(tx.account_id, bal)
+    const col = colOf.get(tx.account_id)
+    const account = accounts[col]
+    const color = account.color || '#FFD200'
+    const id = `tx-${tx.id}`
+    addNode({
+      id, kind: 'tx', account, color, r: radius(tx.amount),
+      x: colX(col), y: ROWS_TOP + r * ROW_H,
+      point: { date: tx.date, balance: bal, label: txLabel(tx), tx },
+    })
+    edges.push({ source: lastNodeId.get(tx.account_id), target: id, color, kind: 'chain' })
+    lastNodeId.set(tx.account_id, id)
+  }
+
+  // Transfer links (yellow dashed), oriented debit -> credit, on a shared row
+  const done = new Set()
+  for (const tx of real) {
+    if (!tx.transfer_pair_id) continue
+    const key = [tx.id, tx.transfer_pair_id].sort((a, b) => a - b).join('-')
+    if (done.has(key)) continue
+    done.add(key)
+    if (!byId.has(`tx-${tx.transfer_pair_id}`)) continue
+    const src = tx.type === 'DEBIT' ? `tx-${tx.id}` : `tx-${tx.transfer_pair_id}`
+    const dst = tx.type === 'DEBIT' ? `tx-${tx.transfer_pair_id}` : `tx-${tx.id}`
+    edges.push({ source: src, target: dst, color: '#FFD200', kind: 'transfer' })
+  }
+
+  // Simulation branches (forecast sessions): appended in the account column,
+  // after the last real node, on their own rows
+  const simTxs = shown.filter(x => x.forecast_session_id)
   const sessionIds = [...new Set(simTxs.map(x => x.forecast_session_id))]
   sessionIds.forEach((sessionId, simIdx) => {
     const simColor = SIM_COLORS[simIdx % SIM_COLORS.length]
     const sessionTxs = simTxs
       .filter(x => x.forecast_session_id === sessionId)
-      .sort((a, b) => new Date(a.date) - new Date(b.date) || a.id - b.id)
+      .sort((a, b) =>
+        new Date(a.date) - new Date(b.date) ||
+        new Date(a.created_at || 0) - new Date(b.created_at || 0) ||
+        a.id - b.id
+      )
     const accountIds = [...new Set(sessionTxs.map(x => x.account_id))]
     for (const accountId of accountIds) {
-      const account = accounts.find(a => a.id === accountId)
-      if (!account) continue
-      const group = accounts.indexOf(account)
-      const anchor = byId.get(lastRealId[accountId])
-      let bal = anchor ? anchor.point.balance : account.initial_balance
-      let prevId = lastRealId[accountId]
-      let order = (anchor?.order ?? 0) + 1
+      const col = colOf.get(accountId)
+      const account = accounts[col]
+      let bal = balances.get(accountId) // branch starts from the last real balance
+      let prevId = lastNodeId.get(accountId)
       for (const tx of sessionTxs.filter(x => x.account_id === accountId)) {
         bal += tx.type === 'CREDIT' ? tx.amount : -tx.amount
+        const r = row++
         const id = `tx-${tx.id}`
         addNode({
-          id, group, order: order++, account, color: account.color || '#FFD200', simColor,
-          point: {
-            date: tx.date, balance: bal,
-            label: tx.description || tx.category_name || (tx.type === 'CREDIT' ? t('common.credit') : t('common.debit')),
-            tx,
-          },
+          id, kind: 'tx', account, color: account.color || '#FFD200', simColor,
+          r: radius(tx.amount), x: colX(col), y: ROWS_TOP + r * ROW_H,
+          point: { date: tx.date, balance: bal, label: txLabel(tx), tx },
         })
-        edges.push({ source: prevId, target: id, chain: true, color: simColor, kind: 'sim' })
+        edges.push({ source: prevId, target: id, color: simColor, kind: 'sim' })
         prevId = id
       }
     }
   })
 
-  // Transfer links (yellow dashed), oriented debit -> credit
-  const done = new Set()
-  for (const node of nodes) {
-    const tx = node.point.tx
-    const pairId = tx?.transfer_pair_id
-    if (!pairId) continue
-    const key = [tx.id, pairId].sort((a, b) => a - b).join('-')
-    if (done.has(key)) continue
-    done.add(key)
-    const partner = byId.get(`tx-${pairId}`)
-    if (!partner) continue
-    const src = tx.type === 'DEBIT' ? node : partner
-    const dst = tx.type === 'DEBIT' ? partner : node
-    edges.push({ source: src.id, target: dst.id, chain: false, color: '#FFD200', kind: 'transfer' })
-  }
-
-  // Node radius: proportional to sqrt(amount), clamped to [MIN_R, MAX_R]
-  const amountOf = n => Math.abs(n.point.tx ? n.point.tx.amount : n.point.balance)
-  const maxAmount = Math.max(1, ...nodes.map(amountOf))
-  for (const n of nodes)
-    n.r = MIN_R + (MAX_R - MIN_R) * Math.sqrt(amountOf(n) / maxAmount)
-
-  return { nodes, edges, byId }
+  return { nodes, edges, markers, byId }
 }
 
 // ── Canvas helpers ───────────────────────────────────────────────────────────
@@ -146,8 +189,31 @@ function drawEdge(ctx, x1, y1, x2, y2, r1, r2, color, dashed) {
   ctx.fill()
 }
 
-function drawNode(ctx, node, x, y) {
-  const { r, color, simColor } = node
+function drawPill(ctx, x, top, lines) {
+  let w = 0
+  for (const line of lines) {
+    ctx.font = line.font
+    w = Math.max(w, ctx.measureText(line.text).width)
+  }
+  const pw = w + 16
+  const ph = lines.length * 12 + 8
+  ctx.beginPath()
+  ctx.roundRect(x - pw / 2, top, pw, ph, 8)
+  ctx.fillStyle = '#211C1A'
+  ctx.fill()
+  ctx.strokeStyle = '#352E2A'
+  ctx.lineWidth = 1
+  ctx.stroke()
+  ctx.textAlign = 'center'
+  lines.forEach((line, i) => {
+    ctx.font = line.font
+    ctx.fillStyle = line.color
+    ctx.fillText(line.text, x, top + 13 + i * 12)
+  })
+}
+
+function drawNode(ctx, node) {
+  const { x, y, r, color, simColor } = node
   ctx.beginPath()
   ctx.arc(x, y, r, 0, Math.PI * 2)
   ctx.fillStyle = simColor ? simColor + '22' : color + '33'
@@ -158,38 +224,20 @@ function drawNode(ctx, node, x, y) {
   ctx.stroke()
   ctx.setLineDash([])
 
-  // Pill under the node: signed amount + short date
+  if (node.kind === 'header') {
+    drawPill(ctx, x, y + r + 5, [
+      { text: node.account.name, font: 'bold 11px system-ui,sans-serif', color: '#F5F1EC' },
+    ])
+    return
+  }
+
   const tx = node.point.tx
-  const amountText = tx
-    ? (tx.type === 'CREDIT' ? '+' : '-') + fmt(tx.amount)
-    : fmt(node.point.balance)
-  const amountColor = tx ? (tx.type === 'CREDIT' ? '#34D399' : '#F87171') : '#F5F1EC'
-  const dateText = fmtDate(node.point.date)
-
-  ctx.font = 'bold 11px system-ui,sans-serif'
-  const w1 = ctx.measureText(amountText).width
-  ctx.font = '10px system-ui,sans-serif'
-  const w2 = ctx.measureText(dateText).width
-  const pw = Math.max(w1, w2) + 16
-  const ph = 32
-  const px = x - pw / 2
-  const py = y + r + 5
-
-  ctx.beginPath()
-  ctx.roundRect(px, py, pw, ph, 8)
-  ctx.fillStyle = '#211C1A'
-  ctx.fill()
-  ctx.strokeStyle = '#352E2A'
-  ctx.lineWidth = 1
-  ctx.stroke()
-
-  ctx.textAlign = 'center'
-  ctx.font = 'bold 11px system-ui,sans-serif'
-  ctx.fillStyle = amountColor
-  ctx.fillText(amountText, x, py + 13)
-  ctx.font = '10px system-ui,sans-serif'
-  ctx.fillStyle = '#A89E92'
-  ctx.fillText(dateText, x, py + 25)
+  const amountText = (tx.type === 'CREDIT' ? '+' : '-') + fmt(tx.amount)
+  const amountColor = tx.type === 'CREDIT' ? '#34D399' : '#F87171'
+  drawPill(ctx, x, y + r + 5, [
+    { text: amountText, font: 'bold 11px system-ui,sans-serif', color: amountColor },
+    { text: fmtDate(node.point.date), font: '10px system-ui,sans-serif', color: '#A89E92' },
+  ])
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -198,7 +246,6 @@ export function GraphView({ transactions, accounts }) {
   const t = useT()
   const containerRef = useRef()
   const canvasRef = useRef()
-  const posRef = useRef(new Map()) // id -> { x, y } (mutable: node drag)
   const viewRef = useRef({ scale: 1, ox: 0, oy: 0 })
   const dragRef = useRef(null)
   const rafRef = useRef(0)
@@ -209,36 +256,30 @@ export function GraphView({ transactions, accounts }) {
     [transactions, accounts, t]
   )
 
-  // Layout computed once per dataset
-  const layout = useMemo(
-    () => (graph ? forceLayout(graph.nodes, graph.edges, accounts?.length || 1) : null),
-    [graph, accounts]
-  )
-
   const draw = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas || !graph) return
     const ctx = canvas.getContext('2d')
     const dpr = window.devicePixelRatio || 1
     const { scale, ox, oy } = viewRef.current
-    const pos = posRef.current
 
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * ox, dpr * oy)
 
+    // Date markers in the left margin
+    ctx.font = '10px system-ui,sans-serif'
+    ctx.fillStyle = '#A89E92'
+    ctx.textAlign = 'left'
+    for (const m of graph.markers) ctx.fillText(m.text, MARKER_X, m.y + 3)
+
     for (const e of graph.edges) {
-      const p1 = pos.get(e.source)
-      const p2 = pos.get(e.target)
-      if (!p1 || !p2) continue
       const n1 = graph.byId.get(e.source)
       const n2 = graph.byId.get(e.target)
-      drawEdge(ctx, p1.x, p1.y, p2.x, p2.y, n1.r, n2.r, e.color, e.kind !== 'chain')
+      if (!n1 || !n2) continue
+      drawEdge(ctx, n1.x, n1.y, n2.x, n2.y, n1.r, n2.r, e.color, e.kind !== 'chain')
     }
-    for (const node of graph.nodes) {
-      const p = pos.get(node.id)
-      if (p) drawNode(ctx, node, p.x, p.y)
-    }
+    for (const node of graph.nodes) drawNode(ctx, node)
   }, [graph])
 
   const scheduleDraw = useCallback(() => {
@@ -248,16 +289,15 @@ export function GraphView({ transactions, accounts }) {
 
   const zoomToFit = useCallback(() => {
     const container = containerRef.current
-    const pos = posRef.current
-    if (!container || !pos.size) return
+    if (!container || !graph?.nodes.length) return
     const cw = container.clientWidth
     const ch = container.clientHeight
     if (!cw || !ch) return
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-    for (const { x, y } of pos.values()) {
+    let minX = MARKER_X - 20, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    for (const { x, y } of graph.nodes) {
       minX = Math.min(minX, x - MAX_R - 60)
       maxX = Math.max(maxX, x + MAX_R + 60)
-      minY = Math.min(minY, y - MAX_R - 30)
+      minY = Math.min(minY, y - MAX_R - 20)
       maxY = Math.max(maxY, y + MAX_R + 70) // room for the pill below
     }
     const bw = Math.max(maxX - minX, 1)
@@ -269,16 +309,10 @@ export function GraphView({ transactions, accounts }) {
       oy: (ch - bh * scale) / 2 - minY * scale,
     }
     scheduleDraw()
-  }, [scheduleDraw])
+  }, [graph, scheduleDraw])
 
-  // Reset positions + fit whenever the dataset (layout) changes
-  useEffect(() => {
-    if (!layout) return
-    const pos = new Map()
-    for (const [id, p] of layout) pos.set(id, { x: p.x, y: p.y })
-    posRef.current = pos
-    zoomToFit()
-  }, [layout, zoomToFit])
+  // Fit the view whenever the dataset changes
+  useEffect(() => { zoomToFit() }, [zoomToFit])
 
   // Canvas sizing (DPR aware) + redraw on resize
   useEffect(() => {
@@ -327,11 +361,9 @@ export function GraphView({ transactions, accounts }) {
     const wy = (my - oy) / scale
     for (let i = graph.nodes.length - 1; i >= 0; i--) {
       const node = graph.nodes[i]
-      const p = posRef.current.get(node.id)
-      if (!p) continue
-      const dx = wx - p.x
-      const dy = wy - p.y
-      if (dx * dx + dy * dy <= node.r * node.r) return { node, wx, wy }
+      const dx = wx - node.x
+      const dy = wy - node.y
+      if (dx * dx + dy * dy <= node.r * node.r) return node
     }
     return null
   }
@@ -344,13 +376,7 @@ export function GraphView({ transactions, accounts }) {
   const onMouseDown = e => {
     if (e.button !== 0) return
     const { mx, my } = localXY(e)
-    const hit = hitNode(mx, my)
-    if (hit) {
-      const p = posRef.current.get(hit.node.id)
-      dragRef.current = { mode: 'node', id: hit.node.id, dx: hit.wx - p.x, dy: hit.wy - p.y }
-    } else {
-      dragRef.current = { mode: 'pan', mx, my }
-    }
+    dragRef.current = { mx, my }
     canvasRef.current.style.cursor = 'grabbing'
     setTooltip(null)
   }
@@ -358,7 +384,7 @@ export function GraphView({ transactions, accounts }) {
   const onMouseMove = e => {
     const { mx, my } = localXY(e)
     const drag = dragRef.current
-    if (drag?.mode === 'pan') {
+    if (drag) {
       const v = viewRef.current
       v.ox += mx - drag.mx
       v.oy += my - drag.my
@@ -367,19 +393,9 @@ export function GraphView({ transactions, accounts }) {
       scheduleDraw()
       return
     }
-    if (drag?.mode === 'node') {
-      const { scale, ox, oy } = viewRef.current
-      const p = posRef.current.get(drag.id)
-      if (p) {
-        p.x = (mx - ox) / scale - drag.dx
-        p.y = (my - oy) / scale - drag.dy
-        scheduleDraw()
-      }
-      return
-    }
     const hit = hitNode(mx, my)
     canvasRef.current.style.cursor = hit ? 'pointer' : 'grab'
-    setTooltip(hit ? { node: hit.node, px: e.clientX, py: e.clientY } : null)
+    setTooltip(hit ? { node: hit, px: e.clientX, py: e.clientY } : null)
   }
 
   const endDrag = () => {
@@ -411,16 +427,6 @@ export function GraphView({ transactions, accounts }) {
         onMouseLeave={() => { endDrag(); setTooltip(null) }}
         onDoubleClick={onDoubleClick}
       />
-
-      {/* Account legend */}
-      <div className="absolute top-3 left-3 flex flex-col gap-1 pointer-events-none">
-        {(accounts || []).map(a => (
-          <div key={a.id} className="flex items-center gap-1.5 text-[11px] text-muted">
-            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: a.color || '#FFD200' }} />
-            {a.name}
-          </div>
-        ))}
-      </div>
 
       {/* Recenter button */}
       <button
