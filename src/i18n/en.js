@@ -72,6 +72,8 @@ export const en = {
   'graph.simulation': ' (simulation)',
   'graph.empty': 'No data to display',
   'graph.recenter': 'Recenter the graph',
+  'graph.zoomIn': 'Zoom in',
+  'graph.zoomOut': 'Zoom out',
 
   // TransactionModal
   'tx.editTitle': 'Edit transaction',

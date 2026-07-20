@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useMemo, useCallback } from 'react'
-import { Locate } from 'lucide-react'
+import { Locate, Plus, Minus } from 'lucide-react'
 import { fmt, fmtDate } from '../utils/format'
 import { useT } from '../i18n'
 
@@ -15,7 +15,6 @@ const ROW_H = 90        // vertical distance between chronological rows
 const COL0_X = 150      // x of the first column center
 const HEADER_Y = 40     // y of the header nodes line
 const ROWS_TOP = 170    // y of the first transaction row
-const MARKER_X = 16     // x of the date markers in the left margin
 
 // ── Graph model: chronological columns ───────────────────────────────────────
 //
@@ -27,12 +26,16 @@ const MARKER_X = 16     // x of the date markers in the left margin
 function buildGraph(transactions, accounts, t) {
   if (!accounts?.length) return null
 
-  const colOf = new Map(accounts.map((a, i) => [a.id, i]))
+  // Only accounts that actually appear in the displayed transactions get a column
+  const usedIds = new Set((transactions || []).map(x => x.account_id))
+  const visible = accounts.filter(a => usedIds.has(a.id))
+  if (!visible.length) return null
+
+  const colOf = new Map(visible.map((a, i) => [a.id, i]))
   const colX = i => COL0_X + i * COL_SPACING
 
   const nodes = []
   const edges = []
-  const markers = []
   const byId = new Map()
   const addNode = n => { nodes.push(n); byId.set(n.id, n) }
 
@@ -45,7 +48,7 @@ function buildGraph(transactions, accounts, t) {
   const radius = amount => MIN_R + (MAX_R - MIN_R) * Math.sqrt(Math.abs(amount) / maxAmount)
 
   // Header nodes (account circle + name), all on the same horizontal line
-  accounts.forEach((account, i) => {
+  visible.forEach((account, i) => {
     addNode({
       id: `head-${account.id}`, kind: 'header', account,
       color: account.color || '#FFD200', r: HEADER_R,
@@ -68,33 +71,21 @@ function buildGraph(transactions, accounts, t) {
       a.id - b.id
     )
 
-  const balances = new Map(accounts.map(a => [a.id, a.initial_balance]))
-  const lastNodeId = new Map(accounts.map(a => [a.id, `head-${a.id}`]))
+  const balances = new Map(visible.map(a => [a.id, a.initial_balance]))
+  const lastNodeId = new Map(visible.map(a => [a.id, `head-${a.id}`]))
   const rowOf = new Map() // tx.id -> global row index
   let row = 0
-  let prevDay = null
 
   for (const tx of real) {
     // Both entries of a transfer pair share the same row
     const pairRow = tx.transfer_pair_id != null ? rowOf.get(tx.transfer_pair_id) : undefined
-    let r
-    if (pairRow != null) {
-      r = pairRow
-    } else {
-      r = row++
-      // Date marker in the left margin on each day change
-      const day = String(tx.date).slice(0, 10)
-      if (day !== prevDay) {
-        prevDay = day
-        markers.push({ y: ROWS_TOP + r * ROW_H, text: `${day.slice(8, 10)}/${day.slice(5, 7)}` })
-      }
-    }
+    const r = pairRow != null ? pairRow : row++
     rowOf.set(tx.id, r)
 
     const bal = balances.get(tx.account_id) + (tx.type === 'CREDIT' ? tx.amount : -tx.amount)
     balances.set(tx.account_id, bal)
     const col = colOf.get(tx.account_id)
-    const account = accounts[col]
+    const account = visible[col]
     const color = account.color || '#FFD200'
     const id = `tx-${tx.id}`
     addNode({
@@ -132,10 +123,10 @@ function buildGraph(transactions, accounts, t) {
         new Date(a.created_at || 0) - new Date(b.created_at || 0) ||
         a.id - b.id
       )
-    const accountIds = [...new Set(sessionTxs.map(x => x.account_id))]
+    const accountIds = [...new Set(sessionTxs.map(x => x.account_id))].filter(id => colOf.has(id))
     for (const accountId of accountIds) {
       const col = colOf.get(accountId)
-      const account = accounts[col]
+      const account = visible[col]
       let bal = balances.get(accountId) // branch starts from the last real balance
       let prevId = lastNodeId.get(accountId)
       for (const tx of sessionTxs.filter(x => x.account_id === accountId)) {
@@ -153,7 +144,7 @@ function buildGraph(transactions, accounts, t) {
     }
   })
 
-  return { nodes, edges, markers, byId }
+  return { nodes, edges, byId }
 }
 
 // ── Canvas helpers ───────────────────────────────────────────────────────────
@@ -267,12 +258,6 @@ export function GraphView({ transactions, accounts }) {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * ox, dpr * oy)
 
-    // Date markers in the left margin
-    ctx.font = '10px system-ui,sans-serif'
-    ctx.fillStyle = '#A89E92'
-    ctx.textAlign = 'left'
-    for (const m of graph.markers) ctx.fillText(m.text, MARKER_X, m.y + 3)
-
     for (const e of graph.edges) {
       const n1 = graph.byId.get(e.source)
       const n2 = graph.byId.get(e.target)
@@ -293,7 +278,7 @@ export function GraphView({ transactions, accounts }) {
     const cw = container.clientWidth
     const ch = container.clientHeight
     if (!cw || !ch) return
-    let minX = MARKER_X - 20, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
     for (const { x, y } of graph.nodes) {
       minX = Math.min(minX, x - MAX_R - 60)
       maxX = Math.max(maxX, x + MAX_R + 60)
@@ -341,7 +326,11 @@ export function GraphView({ transactions, accounts }) {
       const mx = e.clientX - rect.left
       const my = e.clientY - rect.top
       const v = viewRef.current
-      const ns = clamp(v.scale * Math.exp(-e.deltaY * 0.0015), MIN_ZOOM, MAX_ZOOM)
+      // Normalize deltas: lines/pages -> pixels, and enforce a minimum step so
+      // fine-grained touchpad events still produce a visible zoom
+      let dy = e.deltaMode === 1 ? e.deltaY * 32 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY
+      if (dy !== 0) dy = Math.sign(dy) * clamp(Math.abs(dy), 35, 180)
+      const ns = clamp(v.scale * Math.exp(-dy * 0.0028), MIN_ZOOM, MAX_ZOOM)
       v.ox = mx - ((mx - v.ox) * ns) / v.scale
       v.oy = my - ((my - v.oy) * ns) / v.scale
       v.scale = ns
@@ -403,6 +392,20 @@ export function GraphView({ transactions, accounts }) {
     if (canvasRef.current) canvasRef.current.style.cursor = 'grab'
   }
 
+  // Zoom around the canvas center (for the +/- buttons)
+  const zoomBy = factor => {
+    const container = containerRef.current
+    if (!container) return
+    const mx = container.clientWidth / 2
+    const my = container.clientHeight / 2
+    const v = viewRef.current
+    const ns = clamp(v.scale * factor, MIN_ZOOM, MAX_ZOOM)
+    v.ox = mx - ((mx - v.ox) * ns) / v.scale
+    v.oy = my - ((my - v.oy) * ns) / v.scale
+    v.scale = ns
+    scheduleDraw()
+  }
+
   const onDoubleClick = e => {
     const { mx, my } = localXY(e)
     const v = viewRef.current
@@ -428,14 +431,30 @@ export function GraphView({ transactions, accounts }) {
         onDoubleClick={onDoubleClick}
       />
 
-      {/* Recenter button */}
-      <button
-        onClick={zoomToFit}
-        title={t('graph.recenter')}
-        className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-surface2 border border-edge text-muted hover:text-ink hover:border-primary/50 flex items-center justify-center shadow-lg transition-colors"
-      >
-        <Locate size={16} />
-      </button>
+      {/* Zoom + recenter controls */}
+      <div className="absolute bottom-4 right-4 flex flex-col gap-2">
+        <button
+          onClick={() => zoomBy(1.35)}
+          title={t('graph.zoomIn')}
+          className="w-10 h-10 rounded-full bg-surface2 border border-edge text-muted hover:text-ink hover:border-primary/50 flex items-center justify-center shadow-lg transition-colors"
+        >
+          <Plus size={16} />
+        </button>
+        <button
+          onClick={() => zoomBy(1 / 1.35)}
+          title={t('graph.zoomOut')}
+          className="w-10 h-10 rounded-full bg-surface2 border border-edge text-muted hover:text-ink hover:border-primary/50 flex items-center justify-center shadow-lg transition-colors"
+        >
+          <Minus size={16} />
+        </button>
+        <button
+          onClick={zoomToFit}
+          title={t('graph.recenter')}
+          className="w-10 h-10 rounded-full bg-surface2 border border-edge text-muted hover:text-ink hover:border-primary/50 flex items-center justify-center shadow-lg transition-colors"
+        >
+          <Locate size={16} />
+        </button>
+      </div>
 
       {tooltip && (
         <div
