@@ -1,20 +1,24 @@
 import { useRef, useEffect, useState, useMemo, useCallback } from 'react'
 import { Locate, Plus, Minus } from 'lucide-react'
-import { fmt, fmtDate } from '../utils/format'
-import { useT } from '../i18n'
+import { fmt, fmtDate, getFormatLocale } from '../utils/format'
+import { useI18n } from '../i18n'
 
 const SIM_COLORS = ['#F59E0B', '#818CF8', '#34D399', '#F472B6', '#60A5FA', '#FB923C']
-const MIN_R = 14
+const MIN_R = 20
 const MAX_R = 30
 const HEADER_R = 16
 const MIN_ZOOM = 0.2
 const MAX_ZOOM = 4
+const FIT_MIN = 0.7     // readable floor for the automatic framing
+const FIT_MAX = 1.25
 const ARROW_H = 7
 const COL_SPACING = 220 // horizontal distance between account columns
 const ROW_H = 90        // vertical distance between chronological rows
 const COL0_X = 150      // x of the first column center
 const HEADER_Y = 40     // y of the header nodes line
 const ROWS_TOP = 170    // y of the first transaction row
+const CULL_MARGIN = 300 // extra world px drawn above/below the viewport
+const KEY_PAN = 80      // arrow keys pan step (screen px)
 
 // ── Graph model: chronological columns ───────────────────────────────────────
 //
@@ -203,6 +207,12 @@ function drawPill(ctx, x, top, lines) {
   })
 }
 
+// Locale-aware compact notation: "12,5 k" / "1,2 M" (fr), "12.5K" / "1.2M" (en)
+const compactAmount = v =>
+  new Intl.NumberFormat(getFormatLocale(), { notation: 'compact', maximumFractionDigits: 1 })
+    .format(Math.round(v))
+    .replace(/\s/g, '')
+
 function drawNode(ctx, node) {
   const { x, y, r, color, simColor } = node
   ctx.beginPath()
@@ -222,29 +232,41 @@ function drawNode(ctx, node) {
     return
   }
 
+  // Signed amount INSIDE the circle, compact notation when too wide
   const tx = node.point.tx
-  const amountText = (tx.type === 'CREDIT' ? '+' : '-') + fmt(tx.amount)
-  const amountColor = tx.type === 'CREDIT' ? '#34D399' : '#F87171'
-  drawPill(ctx, x, y + r + 5, [
-    { text: amountText, font: 'bold 11px system-ui,sans-serif', color: amountColor },
-    { text: fmtDate(node.point.date), font: '10px system-ui,sans-serif', color: '#A89E92' },
-  ])
+  const sign = tx.type === 'CREDIT' ? '+' : '-'
+  const maxW = 2 * r - 8
+  ctx.font = 'bold 10px system-ui,sans-serif'
+  let text = sign + new Intl.NumberFormat(getFormatLocale()).format(Math.round(tx.amount))
+  if (ctx.measureText(text).width > maxW) {
+    text = sign + compactAmount(tx.amount)
+    if (ctx.measureText(text).width > maxW) ctx.font = 'bold 9px system-ui,sans-serif'
+  }
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillStyle = tx.type === 'CREDIT' ? '#34D399' : '#F87171'
+  ctx.fillText(text, x, y + 0.5)
+  ctx.textBaseline = 'alphabetic'
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function GraphView({ transactions, accounts }) {
-  const t = useT()
+  const { t, lang } = useI18n()
   const containerRef = useRef()
   const canvasRef = useRef()
   const viewRef = useRef({ scale: 1, ox: 0, oy: 0 })
-  const dragRef = useRef(null)
   const rafRef = useRef(0)
+  const pointersRef = useRef(new Map()) // pointerId -> { x, y } (canvas coords)
+  const gestureRef = useRef(null)       // { mode:'pan', x, y } | { mode:'pinch', d, cx, cy }
+  const lastTapRef = useRef({ time: 0, x: 0, y: 0 })
   const [tooltip, setTooltip] = useState(null)
 
+  // The graph depends on the language CODE (stable string), never on a
+  // function identity, so a re-render can never rebuild it by accident.
   const graph = useMemo(
     () => buildGraph(transactions, accounts, t),
-    [transactions, accounts, t]
+    [transactions, accounts, lang] // eslint-disable-line react-hooks/exhaustive-deps
   )
 
   const draw = useCallback(() => {
@@ -258,13 +280,21 @@ export function GraphView({ transactions, accounts }) {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * ox, dpr * oy)
 
+    // Windowed rendering: only draw what falls in the visible y range
+    const wyMin = (0 - oy) / scale - CULL_MARGIN
+    const wyMax = (canvas.height / dpr - oy) / scale + CULL_MARGIN
+
     for (const e of graph.edges) {
       const n1 = graph.byId.get(e.source)
       const n2 = graph.byId.get(e.target)
       if (!n1 || !n2) continue
+      if (Math.max(n1.y, n2.y) < wyMin || Math.min(n1.y, n2.y) > wyMax) continue
       drawEdge(ctx, n1.x, n1.y, n2.x, n2.y, n1.r, n2.r, e.color, e.kind !== 'chain')
     }
-    for (const node of graph.nodes) drawNode(ctx, node)
+    for (const node of graph.nodes) {
+      if (node.y < wyMin || node.y > wyMax) continue
+      drawNode(ctx, node)
+    }
   }, [graph])
 
   const scheduleDraw = useCallback(() => {
@@ -272,32 +302,52 @@ export function GraphView({ transactions, accounts }) {
     rafRef.current = requestAnimationFrame(() => { rafRef.current = 0; draw() })
   }, [draw])
 
+  const hideTooltip = () => setTooltip(prev => (prev === null ? prev : null))
+
+  // Top-anchored framing: fit the columns width (readable floor), view at the
+  // top of the graph; the user scrolls down for the rest. Returns success.
   const zoomToFit = useCallback(() => {
     const container = containerRef.current
-    if (!container || !graph?.nodes.length) return
+    if (!container || !graph?.nodes.length) return false
     const cw = container.clientWidth
     const ch = container.clientHeight
-    if (!cw || !ch) return
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    if (!cw || !ch) return false
+    let minX = Infinity, maxX = -Infinity, minY = Infinity
     for (const { x, y } of graph.nodes) {
-      minX = Math.min(minX, x - MAX_R - 60)
-      maxX = Math.max(maxX, x + MAX_R + 60)
-      minY = Math.min(minY, y - MAX_R - 20)
-      maxY = Math.max(maxY, y + MAX_R + 70) // room for the pill below
+      minX = Math.min(minX, x - MAX_R - 40)
+      maxX = Math.max(maxX, x + MAX_R + 40)
+      minY = Math.min(minY, y - MAX_R - 10)
     }
     const bw = Math.max(maxX - minX, 1)
-    const bh = Math.max(maxY - minY, 1)
-    const scale = clamp(Math.min(cw / bw, ch / bh), MIN_ZOOM, 1.25)
+    const scale = clamp(cw / bw, FIT_MIN, FIT_MAX)
     viewRef.current = {
       scale,
-      ox: (cw - bw * scale) / 2 - minX * scale,
-      oy: (ch - bh * scale) / 2 - minY * scale,
+      ox: bw * scale <= cw ? (cw - bw * scale) / 2 - minX * scale : 8 - minX * scale,
+      oy: 16 - minY * scale,
     }
     scheduleDraw()
+    return true
   }, [graph, scheduleDraw])
 
-  // Fit the view whenever the dataset changes
-  useEffect(() => { zoomToFit() }, [zoomToFit])
+  // Auto-framing ONLY when the dataset really changes (signature guard):
+  // re-renders and function identity churn can never recenter the view.
+  const dataSig = useMemo(() => {
+    const ids = (transactions || []).map(x => x.id)
+    return [
+      ids.length,
+      ids.length ? Math.min(...ids) : 0,
+      ids.length ? Math.max(...ids) : 0,
+      (accounts || []).map(a => a.id).join('.'),
+    ].join('|')
+  }, [transactions, accounts])
+  const dataSigRef = useRef(dataSig)
+  dataSigRef.current = dataSig
+  const fittedSigRef = useRef(null)
+  const fitIfNeeded = useCallback(() => {
+    if (fittedSigRef.current === dataSigRef.current) return
+    if (zoomToFit()) fittedSigRef.current = dataSigRef.current
+  }, [zoomToFit])
+  useEffect(() => { fitIfNeeded() }, [dataSig, fitIfNeeded])
 
   // Canvas sizing (DPR aware) + redraw on resize
   useEffect(() => {
@@ -308,38 +358,82 @@ export function GraphView({ transactions, accounts }) {
       const dpr = window.devicePixelRatio || 1
       canvas.width = Math.max(1, Math.round(container.clientWidth * dpr))
       canvas.height = Math.max(1, Math.round(container.clientHeight * dpr))
+      fitIfNeeded()
       draw()
     }
     const ro = new ResizeObserver(resize)
     ro.observe(container)
     resize()
     return () => ro.disconnect()
-  }, [draw])
+  }, [draw, fitIfNeeded])
 
-  // Wheel zoom around the cursor (native listener: preventDefault needs passive:false)
-  useEffect(() => {
+  const zoomAt = useCallback((mx, my, factor) => {
+    const v = viewRef.current
+    const ns = clamp(v.scale * factor, MIN_ZOOM, MAX_ZOOM)
+    v.ox = mx - ((mx - v.ox) * ns) / v.scale
+    v.oy = my - ((my - v.oy) * ns) / v.scale
+    v.scale = ns
+    scheduleDraw()
+  }, [scheduleDraw])
+
+  const zoomAtCenter = useCallback(factor => {
+    const c = containerRef.current
+    if (c) zoomAt(c.clientWidth / 2, c.clientHeight / 2, factor)
+  }, [zoomAt])
+
+  // Wheel, attached through a callback ref so the native listener
+  // (passive:false, required for preventDefault) is ALWAYS bound as soon as
+  // the canvas exists. Two-finger scroll = pan; ctrl+wheel (incl. touchpad
+  // pinch, which Chromium reports as ctrl+wheel) = zoom around the cursor.
+  const wheelImplRef = useRef()
+  wheelImplRef.current = e => {
+    e.preventDefault()
     const canvas = canvasRef.current
     if (!canvas) return
-    const onWheel = e => {
-      e.preventDefault()
+    const norm = d => (e.deltaMode === 1 ? d * 32 : e.deltaMode === 2 ? d * 400 : d)
+    if (e.ctrlKey) {
       const rect = canvas.getBoundingClientRect()
-      const mx = e.clientX - rect.left
-      const my = e.clientY - rect.top
+      const dy = clamp(norm(e.deltaY), -50, 50)
+      zoomAt(e.clientX - rect.left, e.clientY - rect.top, Math.exp(-dy * 0.01))
+    } else {
       const v = viewRef.current
-      // Normalize deltas: lines/pages -> pixels, and enforce a minimum step so
-      // fine-grained touchpad events still produce a visible zoom
-      let dy = e.deltaMode === 1 ? e.deltaY * 32 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY
-      if (dy !== 0) dy = Math.sign(dy) * clamp(Math.abs(dy), 35, 180)
-      const ns = clamp(v.scale * Math.exp(-dy * 0.0028), MIN_ZOOM, MAX_ZOOM)
-      v.ox = mx - ((mx - v.ox) * ns) / v.scale
-      v.oy = my - ((my - v.oy) * ns) / v.scale
-      v.scale = ns
-      setTooltip(null)
+      v.ox -= norm(e.deltaX)
+      v.oy -= norm(e.deltaY)
       scheduleDraw()
     }
-    canvas.addEventListener('wheel', onWheel, { passive: false })
-    return () => canvas.removeEventListener('wheel', onWheel)
-  }, [scheduleDraw])
+    hideTooltip()
+  }
+  const wheelProxyRef = useRef(e => wheelImplRef.current?.(e))
+  const setCanvasRef = useCallback(node => {
+    if (canvasRef.current) canvasRef.current.removeEventListener('wheel', wheelProxyRef.current)
+    canvasRef.current = node
+    if (node) node.addEventListener('wheel', wheelProxyRef.current, { passive: false })
+  }, [])
+
+  // Keyboard: ctrl +/- zoom, ctrl 0 recenter, arrows / PageUp / PageDown pan
+  useEffect(() => {
+    const isEditable = el =>
+      !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)
+    const onKey = e => {
+      if (isEditable(document.activeElement)) return
+      const v = viewRef.current
+      const page = (containerRef.current?.clientHeight || 600) * 0.85
+      let handled = true
+      if (e.ctrlKey && (e.key === '+' || e.key === '=')) zoomAtCenter(1.35)
+      else if (e.ctrlKey && e.key === '-') zoomAtCenter(1 / 1.35)
+      else if (e.ctrlKey && e.key === '0') zoomToFit()
+      else if (e.key === 'ArrowUp') { v.oy += KEY_PAN; scheduleDraw() }
+      else if (e.key === 'ArrowDown') { v.oy -= KEY_PAN; scheduleDraw() }
+      else if (e.key === 'ArrowLeft') { v.ox += KEY_PAN; scheduleDraw() }
+      else if (e.key === 'ArrowRight') { v.ox -= KEY_PAN; scheduleDraw() }
+      else if (e.key === 'PageUp') { v.oy += page; scheduleDraw() }
+      else if (e.key === 'PageDown') { v.oy -= page; scheduleDraw() }
+      else handled = false
+      if (handled) e.preventDefault()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [zoomAtCenter, zoomToFit, scheduleDraw])
 
   useEffect(() => () => cancelAnimationFrame(rafRef.current), [])
 
@@ -362,58 +456,99 @@ export function GraphView({ transactions, accounts }) {
     return { mx: e.clientX - rect.left, my: e.clientY - rect.top }
   }
 
-  const onMouseDown = e => {
-    if (e.button !== 0) return
-    const { mx, my } = localXY(e)
-    dragRef.current = { mx, my }
-    canvasRef.current.style.cursor = 'grabbing'
-    setTooltip(null)
+  // ── Pointer Events: mouse drag + touch (1 finger pan, 2 finger pinch) ──────
+
+  const pinchState = () => {
+    const pts = [...pointersRef.current.values()]
+    const dx = pts[1].x - pts[0].x
+    const dy = pts[1].y - pts[0].y
+    return {
+      d: Math.max(Math.sqrt(dx * dx + dy * dy), 1),
+      cx: (pts[0].x + pts[1].x) / 2,
+      cy: (pts[0].y + pts[1].y) / 2,
+    }
   }
 
-  const onMouseMove = e => {
+  const onPointerDown = e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return
     const { mx, my } = localXY(e)
-    const drag = dragRef.current
-    if (drag) {
+    canvasRef.current.setPointerCapture(e.pointerId)
+    pointersRef.current.set(e.pointerId, { x: mx, y: my })
+    const count = pointersRef.current.size
+    if (count === 1) {
+      gestureRef.current = { mode: 'pan', x: mx, y: my }
+      // Double-tap = zoom x2 (touch counterpart of the mouse double-click)
+      if (e.pointerType === 'touch') {
+        const tap = lastTapRef.current
+        const now = performance.now()
+        if (now - tap.time < 300 && Math.hypot(mx - tap.x, my - tap.y) < 30) {
+          zoomAt(mx, my, 2)
+          lastTapRef.current = { time: 0, x: 0, y: 0 }
+        } else {
+          lastTapRef.current = { time: now, x: mx, y: my }
+        }
+      }
+    } else if (count === 2) {
+      gestureRef.current = { mode: 'pinch', ...pinchState() }
+    }
+    canvasRef.current.style.cursor = 'grabbing'
+    hideTooltip()
+  }
+
+  const onPointerMove = e => {
+    const { mx, my } = localXY(e)
+    const pointers = pointersRef.current
+    const g = gestureRef.current
+
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: mx, y: my })
+
+    if (g?.mode === 'pinch' && pointers.size >= 2) {
+      // Continuous zoom on the finger distance ratio, anchored at the midpoint
+      const s = pinchState()
       const v = viewRef.current
-      v.ox += mx - drag.mx
-      v.oy += my - drag.my
-      drag.mx = mx
-      drag.my = my
+      const ns = clamp(v.scale * (s.d / g.d), MIN_ZOOM, MAX_ZOOM)
+      v.ox = s.cx - ((g.cx - v.ox) * ns) / v.scale
+      v.oy = s.cy - ((g.cy - v.oy) * ns) / v.scale
+      v.scale = ns
+      gestureRef.current = { mode: 'pinch', ...s } // rebase the gesture
       scheduleDraw()
       return
     }
-    const hit = hitNode(mx, my)
-    canvasRef.current.style.cursor = hit ? 'pointer' : 'grab'
-    setTooltip(hit ? { node: hit, px: e.clientX, py: e.clientY } : null)
+    if (g?.mode === 'pan' && pointers.has(e.pointerId)) {
+      const v = viewRef.current
+      v.ox += mx - g.x
+      v.oy += my - g.y
+      g.x = mx
+      g.y = my
+      scheduleDraw()
+      return
+    }
+    if (e.pointerType === 'mouse' && pointers.size === 0) {
+      // Plain hover: tooltip + cursor
+      const hit = hitNode(mx, my)
+      canvasRef.current.style.cursor = hit ? 'pointer' : 'grab'
+      setTooltip(prev => (hit ? { node: hit, px: e.clientX, py: e.clientY } : prev === null ? prev : null))
+    }
   }
 
-  const endDrag = () => {
-    dragRef.current = null
-    if (canvasRef.current) canvasRef.current.style.cursor = 'grab'
-  }
-
-  // Zoom around the canvas center (for the +/- buttons)
-  const zoomBy = factor => {
-    const container = containerRef.current
-    if (!container) return
-    const mx = container.clientWidth / 2
-    const my = container.clientHeight / 2
-    const v = viewRef.current
-    const ns = clamp(v.scale * factor, MIN_ZOOM, MAX_ZOOM)
-    v.ox = mx - ((mx - v.ox) * ns) / v.scale
-    v.oy = my - ((my - v.oy) * ns) / v.scale
-    v.scale = ns
-    scheduleDraw()
+  const onPointerEnd = e => {
+    const pointers = pointersRef.current
+    if (!pointers.has(e.pointerId)) return
+    pointers.delete(e.pointerId)
+    try { canvasRef.current?.releasePointerCapture(e.pointerId) } catch (_) { /* already released */ }
+    if (pointers.size === 1) {
+      // Pinch -> pan handoff: rebase on the remaining finger
+      const rest = [...pointers.values()][0]
+      gestureRef.current = { mode: 'pan', x: rest.x, y: rest.y }
+    } else if (pointers.size === 0) {
+      gestureRef.current = null
+      if (canvasRef.current) canvasRef.current.style.cursor = 'grab'
+    }
   }
 
   const onDoubleClick = e => {
     const { mx, my } = localXY(e)
-    const v = viewRef.current
-    const ns = clamp(v.scale * 2, MIN_ZOOM, MAX_ZOOM)
-    v.ox = mx - ((mx - v.ox) * ns) / v.scale
-    v.oy = my - ((my - v.oy) * ns) / v.scale
-    v.scale = ns
-    scheduleDraw()
+    zoomAt(mx, my, 2)
   }
 
   if (!graph || !graph.nodes.length)
@@ -422,26 +557,33 @@ export function GraphView({ transactions, accounts }) {
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-hidden bg-base">
       <canvas
-        ref={canvasRef}
+        ref={setCanvasRef}
         className="absolute inset-0 w-full h-full block cursor-grab"
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={endDrag}
-        onMouseLeave={() => { endDrag(); setTooltip(null) }}
+        style={{ touchAction: 'none' }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerEnd}
+        onPointerCancel={onPointerEnd}
+        onPointerLeave={() => { if (!gestureRef.current) hideTooltip() }}
         onDoubleClick={onDoubleClick}
       />
+
+      {/* Gesture hint */}
+      <p className="absolute bottom-3 left-3 text-[11px] text-muted pointer-events-none select-none">
+        {t('graph.hint')}
+      </p>
 
       {/* Zoom + recenter controls */}
       <div className="absolute bottom-4 right-4 flex flex-col gap-2">
         <button
-          onClick={() => zoomBy(1.35)}
+          onClick={() => zoomAtCenter(1.35)}
           title={t('graph.zoomIn')}
           className="w-10 h-10 rounded-full bg-surface2 border border-edge text-muted hover:text-ink hover:border-primary/50 flex items-center justify-center shadow-lg transition-colors"
         >
           <Plus size={16} />
         </button>
         <button
-          onClick={() => zoomBy(1 / 1.35)}
+          onClick={() => zoomAtCenter(1 / 1.35)}
           title={t('graph.zoomOut')}
           className="w-10 h-10 rounded-full bg-surface2 border border-edge text-muted hover:text-ink hover:border-primary/50 flex items-center justify-center shadow-lg transition-colors"
         >

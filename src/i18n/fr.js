@@ -72,6 +72,7 @@ export const fr = {
   'graph.simulation': ' (simulation)',
   'graph.empty': 'Aucune donnée à afficher',
   'graph.recenter': 'Recentrer le graphe',
+  'graph.hint': 'Ctrl + défilement : zoom · défilement : déplacer',
   'graph.zoomIn': 'Zoomer',
   'graph.zoomOut': 'Dézoomer',
 
