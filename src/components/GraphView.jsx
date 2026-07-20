@@ -5,7 +5,7 @@ import { useI18n } from '../i18n'
 
 const SIM_COLORS = ['#F59E0B', '#818CF8', '#34D399', '#F472B6', '#60A5FA', '#FB923C']
 const MIN_R = 20
-const MAX_R = 30
+const MAX_R = 44
 const HEADER_R = 16
 const MIN_ZOOM = 0.2
 const MAX_ZOOM = 4
@@ -13,7 +13,7 @@ const FIT_MIN = 0.7     // readable floor for the automatic framing
 const FIT_MAX = 1.25
 const ARROW_H = 7
 const COL_SPACING = 220 // horizontal distance between account columns
-const ROW_H = 90        // vertical distance between chronological rows
+const ROW_H = 104       // vertical distance between chronological rows
 const COL0_X = 150      // x of the first column center
 const HEADER_Y = 40     // y of the header nodes line
 const ROWS_TOP = 170    // y of the first transaction row
@@ -46,10 +46,9 @@ function buildGraph(transactions, accounts, t) {
   const txLabel = tx =>
     tx.description || tx.category_name || (tx.type === 'CREDIT' ? t('common.credit') : t('common.debit'))
 
-  // Node radius: proportional to sqrt(amount), clamped to [MIN_R, MAX_R]
+  // Node radius: sized so the full formatted amount fits inside the circle
   const shown = transactions.filter(x => colOf.has(x.account_id))
-  const maxAmount = Math.max(1, ...shown.map(x => Math.abs(x.amount)))
-  const radius = amount => MIN_R + (MAX_R - MIN_R) * Math.sqrt(Math.abs(amount) / maxAmount)
+  const radius = amount => (measureCtx ? measureRadius(measureCtx, amount) : MIN_R + 8)
 
   // Header nodes (account circle + name), all on the same horizontal line
   visible.forEach((account, i) => {
@@ -207,11 +206,24 @@ function drawPill(ctx, x, top, lines) {
   })
 }
 
-// Locale-aware compact notation: "12,5 k" / "1,2 M" (fr), "12.5K" / "1.2M" (en)
-const compactAmount = v =>
-  new Intl.NumberFormat(getFormatLocale(), { notation: 'compact', maximumFractionDigits: 1 })
-    .format(Math.round(v))
-    .replace(/\s/g, '')
+// Poppins is bundled by the app (fontsource); Arial fallback avoids the broken
+// glyph advances that Chromium's "system-ui" produces on some Linux setups.
+const CANVAS_FONT = '"Poppins", Arial, sans-serif'
+
+const shortDate = iso => {
+  const s = String(iso)
+  return `${s.slice(8, 10)}/${s.slice(5, 7)}`
+}
+
+// Node radius sized so the full amount always fits inside the circle
+function measureRadius(ctx, amount) {
+  ctx.font = `bold 11px ${CANVAS_FONT}`
+  const text = '+' + new Intl.NumberFormat(getFormatLocale()).format(Math.round(amount))
+  return clamp(ctx.measureText(text).width / 2 + 10, MIN_R, 44)
+}
+
+const measureCtx =
+  typeof document !== 'undefined' ? document.createElement('canvas').getContext('2d') : null
 
 function drawNode(ctx, node) {
   const { x, y, r, color, simColor } = node
@@ -227,25 +239,24 @@ function drawNode(ctx, node) {
 
   if (node.kind === 'header') {
     drawPill(ctx, x, y + r + 5, [
-      { text: node.account.name, font: 'bold 11px system-ui,sans-serif', color: '#F5F1EC' },
+      { text: node.account.name, font: `bold 11px ${CANVAS_FONT}`, color: '#F5F1EC' },
     ])
     return
   }
 
-  // Signed amount INSIDE the circle, compact notation when too wide
+  // Full signed amount + date INSIDE the circle (never abbreviated)
   const tx = node.point.tx
   const sign = tx.type === 'CREDIT' ? '+' : '-'
-  const maxW = 2 * r - 8
-  ctx.font = 'bold 10px system-ui,sans-serif'
-  let text = sign + new Intl.NumberFormat(getFormatLocale()).format(Math.round(tx.amount))
-  if (ctx.measureText(text).width > maxW) {
-    text = sign + compactAmount(tx.amount)
-    if (ctx.measureText(text).width > maxW) ctx.font = 'bold 9px system-ui,sans-serif'
-  }
+  const text = sign + new Intl.NumberFormat(getFormatLocale()).format(Math.round(tx.amount))
+  const dateText = shortDate(node.point.date)
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
+  ctx.font = `bold 11px ${CANVAS_FONT}`
   ctx.fillStyle = tx.type === 'CREDIT' ? '#34D399' : '#F87171'
-  ctx.fillText(text, x, y + 0.5)
+  ctx.fillText(text, x, y - 6)
+  ctx.font = `9px ${CANVAS_FONT}`
+  ctx.fillStyle = '#A89E92'
+  ctx.fillText(dateText, x, y + 8)
   ctx.textBaseline = 'alphabetic'
 }
 
@@ -436,6 +447,13 @@ export function GraphView({ transactions, accounts }) {
   }, [zoomAtCenter, zoomToFit, scheduleDraw])
 
   useEffect(() => () => cancelAnimationFrame(rafRef.current), [])
+
+  // Redraw once the bundled Poppins is ready (avoids fallback-metrics text)
+  useEffect(() => {
+    let alive = true
+    document.fonts?.ready?.then(() => { if (alive) scheduleDraw() })
+    return () => { alive = false }
+  }, [scheduleDraw])
 
   const hitNode = (mx, my) => {
     if (!graph) return null
