@@ -6,3 +6,9 @@ dist/
 
 .env
 .env.*
+
+# Local database and seeding helper (personal data, never committed)
+data/*.db
+data/*.db-shm
+data/*.db-wal
+scripts/seed.mjs
