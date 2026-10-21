@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Select, Input } from './ui/Field'
 import { Button } from './ui/Button'
 import { useT } from '../i18n'
-import { fmtRate, fmtPercentNumber } from './FeeRuleModal'
+import { fmtRate } from './FeeRuleModal'
 import { Plus, ArrowLeftRight, TrendingUp, Table2, GitBranch, SlidersHorizontal, X, CalendarDays, Percent } from 'lucide-react'
 
 const hasActiveFilters = f => f.type || f.category_id || f.date_from || f.date_to
@@ -83,7 +83,7 @@ export function Controls({
           return (
             <button
               onClick={() => onFeeRule?.(acct)}
-              title={hasRule ? t('controls.feeRuleCurrent', { rate: fmtPercentNumber(acct.fees_rate) }) : t('controls.feeRuleDefine')}
+              title={hasRule ? t('controls.feeRuleCurrent', { rate: fmtRate(acct.fees_rate) }) : t('controls.feeRuleDefine')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
                 hasRule
                   ? 'border-amber-500/50 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20'

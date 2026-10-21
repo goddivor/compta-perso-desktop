@@ -193,7 +193,7 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
                 {t('tx.applyFeeRule')}{' '}
                 <span className="text-primary font-medium">{fmtRate(feeRate)}</span>
                 {baseAmount > 0 && (
-                  <span className="text-faint ml-1">→ {fmt(autoFees)} FCFA</span>
+                  <span className="text-faint ml-1">→ {fmt(autoFees)}</span>
                 )}
               </span>
             </label>

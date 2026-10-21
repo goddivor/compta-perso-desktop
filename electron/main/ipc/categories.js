@@ -6,11 +6,13 @@ export function registerCategoriesHandlers() {
     getDb().prepare('SELECT * FROM categories ORDER BY flow, name').all()
   )
 
+  // icon is optional: missing or '' is stored as NULL, like mobile createCategory.
   ipcMain.handle('categories:create', (_, data) => {
-    const r = getDb().prepare(
+    const db = getDb()
+    const r = db.prepare(
       'INSERT INTO categories (name,flow,color,icon) VALUES (@name,@flow,@color,@icon)'
-    ).run(data)
-    return { id: r.lastInsertRowid, ...data }
+    ).run({ name: data.name, flow: data.flow, color: data.color, icon: data.icon || null })
+    return db.prepare('SELECT * FROM categories WHERE id=?').get(r.lastInsertRowid)
   })
 
   // icon undefined keeps the stored icon (one chosen on the phone survives a
