@@ -2,9 +2,23 @@ import { useState, useEffect } from 'react'
 import { Modal } from './ui/Modal'
 import { Button } from './ui/Button'
 import { Field, Input } from './ui/Field'
-import { fmt } from '../utils/format'
+import { fmt, getFormatLocale } from '../utils/format'
 import { useT } from '../i18n'
 import { Percent, Trash2 } from 'lucide-react'
+
+// fees_rate is stored as a fraction (0.01 = 1 %); the user reads and types a percentage.
+// Rounding to 6 decimals of a percent hides float noise (0.015 * 100 = 1.5000000000000002).
+export const rateToPercent = (rate) => Math.round(rate * 1e8) / 1e6
+const percentToRate = (pct) => Math.round(pct * 1e6) / 1e8
+
+// Plain number in the app locale, e.g. 1.5 → "1,5" (fr) / "1.5" (en)
+export const fmtPercentNumber = (rate) =>
+  new Intl.NumberFormat(getFormatLocale(), { maximumFractionDigits: 4 }).format(rateToPercent(rate))
+
+// Full percentage in the app locale, e.g. 0.01 → "1 %" (fr, narrow no-break space) / "1%" (en)
+export const fmtRate = (rate) =>
+  new Intl.NumberFormat(getFormatLocale(), { style: 'percent', maximumFractionDigits: 4 })
+    .format(percentToRate(rateToPercent(rate)))
 
 export function FeeRuleModal({ isOpen, onClose, onSave, account }) {
   const t = useT()
@@ -12,11 +26,12 @@ export function FeeRuleModal({ isOpen, onClose, onSave, account }) {
 
   useEffect(() => {
     if (!isOpen) return
-    setRate(account?.fees_rate != null ? String(account.fees_rate) : '')
+    setRate(account?.fees_rate != null ? String(rateToPercent(account.fees_rate)) : '')
   }, [isOpen, account?.id])
 
-  const rateNum   = parseFloat(rate)
-  const hasRate   = !isNaN(rateNum) && rateNum > 0
+  const pctNum    = parseFloat(rate)
+  const hasRate   = !isNaN(pctNum) && pctNum > 0
+  const rateNum   = hasRate ? percentToRate(pctNum) : null
   const example   = hasRate ? Math.round(10000 * rateNum) : null
 
   const save = async () => {
@@ -60,7 +75,7 @@ export function FeeRuleModal({ isOpen, onClose, onSave, account }) {
               onChange={e => setRate(e.target.value)}
               placeholder={t('feeRule.ratePlaceholder')}
               min="0"
-              step="0.001"
+              step="0.01"
             />
             <Percent size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
           </div>
@@ -81,7 +96,7 @@ export function FeeRuleModal({ isOpen, onClose, onSave, account }) {
 
         {!hasRate && account.fees_rate != null && (
           <p className="text-xs text-primary">
-            {t('feeRule.current', { rate: account.fees_rate })}
+            {t('feeRule.current', { rate: fmtRate(account.fees_rate) })}
           </p>
         )}
 
