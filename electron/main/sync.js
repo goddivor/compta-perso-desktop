@@ -2,9 +2,15 @@ import { app } from 'electron'
 import { join } from 'path'
 import { hostname } from 'os'
 import { readFileSync, writeFileSync, existsSync, rmSync } from 'fs'
-import { getDb } from './db.js'
+import { getDb, tableColumns, backfillFeeRules, backfillCategoryIcons } from './db.js'
 
-const TABLES = ['accounts', 'categories', 'transactions', 'forecast_sessions']
+// Tables carried by a snapshot (push and pull). profile and fee_rules are v2:
+// an old snapshot may lack them, see restoreLocalData. Same list as the
+// mobile app's SYNC_TABLES.
+const TABLES = ['accounts', 'categories', 'transactions', 'forecast_sessions', 'fee_rules', 'profile']
+
+// Tables every snapshot, old or new, must carry as arrays
+const CORE_TABLES = ['accounts', 'categories', 'transactions', 'forecast_sessions']
 const CONFIG_URL = 'https://compta-perso-sync-api.vercel.app/api/config'
 
 function configPath() {
@@ -98,31 +104,68 @@ function dumpLocalData() {
   return data
 }
 
-function tableColumns(db, table) {
-  return db.prepare(`PRAGMA table_info(${table})`).all().map(c => c.name)
+// True when a payload is a usable snapshot (the four v1 tables are arrays)
+function isValidSnapshot(data) {
+  return !!data && typeof data === 'object' && CORE_TABLES.every(t => Array.isArray(data[t]))
 }
 
+// better-sqlite3 binds only numbers, strings, bigints, buffers and null
+function bindable(v) {
+  if (v === undefined || v === null) return null
+  if (typeof v === 'boolean') return v ? 1 : 0
+  if (typeof v === 'number' || typeof v === 'string' || typeof v === 'bigint' || Buffer.isBuffer(v)) return v
+  return JSON.stringify(v) // e.g. fee_rules.tiers sent as an array
+}
+
+// Inserts rows keeping only the columns that exist locally AND that the row
+// carries: a snapshot column unknown here is dropped, a local column absent
+// from the snapshot takes its default. Neither aborts the restore.
+function insertRows(db, table, rows) {
+  const cols = tableColumns(db, table)
+  const stmts = new Map()
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue
+    const usable = cols.filter(c => row[c] !== undefined)
+    if (!usable.length) continue
+    const key = usable.join(',')
+    let stmt = stmts.get(key)
+    if (!stmt) {
+      stmt = db.prepare(`INSERT INTO ${table} (${key}) VALUES (${usable.map(() => '?').join(',')})`)
+      stmts.set(key, stmt)
+    }
+    stmt.run(usable.map(c => bindable(row[c])))
+  }
+}
+
+// Replaces ALL local content with the cloud payload, keeping ids, in one
+// transaction with foreign keys off (any error rolls everything back).
+// A payload without the four v1 tables throws before anything is deleted.
+// Old snapshots (v1 clients, or a server without the v2 tables):
+// - no profile with a currency → the local profile is kept (not wiped);
+// - no fee_rules → each account with a fees_rate gets its percent rule back;
+// - built-in categories without an icon get theirs.
 function restoreLocalData(data) {
+  if (!isValidSnapshot(data)) throw new Error('Invalid snapshot: nothing restored')
   const db = getDb()
+  // A snapshot profile counts only when it carries a currency; it is always
+  // stored as the singleton row id = 1.
+  const snapProfile = Array.isArray(data.profile)
+    ? data.profile.find(p => p && typeof p === 'object' && p.currency)
+    : null
+  const tables = snapProfile ? TABLES : TABLES.filter(t => t !== 'profile')
   db.pragma('foreign_keys = OFF')
   try {
     db.transaction(() => {
-      for (const t of TABLES) db.prepare(`DELETE FROM ${t}`).run()
-      for (const t of TABLES) {
-        const rows = data[t] || []
-        if (!rows.length) continue
-        const cols = tableColumns(db, t)
-        // Only insert columns that exist locally (tolerates schema drift)
-        const usable = cols.filter(c => c in rows[0])
-        const stmt = db.prepare(
-          `INSERT INTO ${t} (${usable.join(',')}) VALUES (${usable.map(c => `@${c}`).join(',')})`
-        )
-        for (const row of rows) {
-          const clean = {}
-          for (const c of usable) clean[c] = row[c] ?? null
-          stmt.run(clean)
-        }
+      for (const t of tables) db.prepare(`DELETE FROM ${t}`).run()
+      for (const t of tables) {
+        const rows = t === 'profile'
+          ? [{ ...snapProfile, id: 1 }]
+          : (Array.isArray(data[t]) ? data[t] : [])
+        if (rows.length) insertRows(db, t, rows)
       }
+      db.prepare('INSERT OR IGNORE INTO profile (id) VALUES (1)').run()
+      backfillFeeRules(db)
+      backfillCategoryIcons(db)
     })()
   } finally {
     db.pragma('foreign_keys = ON')
@@ -145,7 +188,7 @@ export async function syncPull() {
   const cfg = getSyncConfig()
   assertConfigured(cfg)
   const result = await api(cfg, '/api/pull', { method: 'GET' })
-  restoreLocalData(result.data)
+  restoreLocalData(result && result.data)
   saveSyncConfig({ last_pull: new Date().toISOString() })
   return result.meta
 }

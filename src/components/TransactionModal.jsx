@@ -4,6 +4,7 @@ import { Button } from './ui/Button'
 import { Field, Input, Select, Textarea } from './ui/Field'
 import { fmt, today } from '../utils/format'
 import { useT } from '../i18n'
+import { fmtRate } from './FeeRuleModal'
 
 const emptyForm = {
   account_id: '', type: 'DEBIT', amount: '', fees: '', category_id: '',
@@ -190,9 +191,9 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
               </div>
               <span className="text-xs text-muted">
                 {t('tx.applyFeeRule')}{' '}
-                <span className="text-primary font-medium">{feeRate}%</span>
+                <span className="text-primary font-medium">{fmtRate(feeRate)}</span>
                 {baseAmount > 0 && (
-                  <span className="text-faint ml-1">→ {fmt(autoFees)} FCFA</span>
+                  <span className="text-faint ml-1">→ {fmt(autoFees)}</span>
                 )}
               </span>
             </label>
