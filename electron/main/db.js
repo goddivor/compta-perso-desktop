@@ -24,15 +24,21 @@ function resolveDbPath() {
 const DATA_VERSION = 1
 
 export function getDb() {
-  if (!db) {
-    db = new Database(resolveDbPath())
-    db.pragma('journal_mode = WAL')
-    db.pragma('foreign_keys = ON')
-    initSchema()
-    migrateColumns()
-    seedDefaults()
-    migrateData()
-  }
+  if (!db) db = openDatabase(resolveDbPath())
+  return db
+}
+
+// Opens a database file and brings it to the current schema. Exported so a
+// throw-away database can be checked outside the app's data folder.
+export function openDatabase(path) {
+  db = new Database(path)
+  db.pragma('journal_mode = WAL')
+  db.pragma('foreign_keys = ON')
+  initSchema()
+  migrateColumns()
+  seedDefaults()
+  migrateData()
+  setAccountCurrencyDefault(db, true)
   return db
 }
 
@@ -54,7 +60,8 @@ function initSchema() {
       name TEXT NOT NULL,
       flow TEXT NOT NULL CHECK(flow IN ('DEBIT','CREDIT','BOTH')),
       color TEXT DEFAULT '#6B7280',
-      icon TEXT
+      icon TEXT,
+      builtin_key TEXT DEFAULT NULL
     );
 
     CREATE TABLE IF NOT EXISTS forecast_sessions (
@@ -124,6 +131,76 @@ function migrateColumns() {
   addColumnIfMissing('accounts', 'operator_id', 'TEXT DEFAULT NULL')
   addColumnIfMissing('accounts', 'operator_dismissed', 'INTEGER DEFAULT 0')
   addColumnIfMissing('categories', 'icon', 'TEXT')
+  // builtin_key: one-time step when the column appears, existing built-in
+  // categories get their key by name. No name is changed.
+  if (addColumnIfMissing('categories', 'builtin_key', 'TEXT DEFAULT NULL')) {
+    db.transaction(() => backfillBuiltinKeys(db))()
+  }
+}
+
+// Stable key of each built-in category with its default French and English
+// names. Same table as the mobile app (src/db/database.js); the key is what
+// the UI translates (categories.builtin.<key>) while the stored name is still
+// one of these defaults.
+export const BUILTIN_CATEGORIES = [
+  { key: 'food',       fr: 'Nourriture', en: 'Food' },
+  { key: 'fuel',       fr: 'Essence',    en: 'Fuel' },
+  { key: 'transport',  fr: 'Transport',  en: 'Transport' },
+  { key: 'health',     fr: 'Sante',      en: 'Health' },
+  { key: 'clothes',    fr: 'Vetements',  en: 'Clothes' },
+  { key: 'leisure',    fr: 'Loisirs',    en: 'Leisure' },
+  { key: 'bills',      fr: 'Factures',   en: 'Bills' },
+  { key: 'salary',     fr: 'Salaire',    en: 'Salary' },
+  { key: 'freelance',  fr: 'Freelance',  en: 'Freelance' },
+  { key: 'withdrawal', fr: 'Retrait',    en: 'Withdrawal' },
+  { key: 'other',      fr: 'Autres',     en: 'Other' },
+]
+
+// Normalized default name (fr or en) → key
+const BUILTIN_KEY_BY_NAME = Object.fromEntries(
+  BUILTIN_CATEGORIES.flatMap(c => [[normalizeName(c.fr), c.key], [normalizeName(c.en), c.key]])
+)
+
+// Categories without a key whose name is a default name (fr or en, case and
+// accent-insensitive) get that key. One row per key: a key already held, or
+// a second row with the same default name, is left alone. Only builtin_key
+// is written; names, colours and icons are never touched. `onlyIds`
+// (optional) limits the step to those category ids.
+export function backfillBuiltinKeys(d, onlyIds) {
+  const held = new Set(
+    d.prepare('SELECT builtin_key FROM categories WHERE builtin_key IS NOT NULL').all().map(r => r.builtin_key)
+  )
+  let rows = d.prepare('SELECT id, name FROM categories WHERE builtin_key IS NULL ORDER BY id').all()
+  if (onlyIds) rows = rows.filter(r => onlyIds.has(r.id))
+  const upd = d.prepare('UPDATE categories SET builtin_key=? WHERE id=? AND builtin_key IS NULL')
+  for (const row of rows) {
+    const key = BUILTIN_KEY_BY_NAME[normalizeName(row.name)]
+    if (!key || held.has(key)) continue
+    upd.run(key, row.id)
+    held.add(key)
+  }
+}
+
+// New accounts store the profile currency code. The renderer still sends the
+// column default 'FCFA'; while a profile currency exists, this connection-only
+// (TEMP) trigger replaces it on the row just inserted. Existing rows are never
+// rewritten, and nothing is written to the database file's schema. A restore
+// turns it off so snapshot rows keep their stored currency.
+export function setAccountCurrencyDefault(d, on) {
+  if (!on) {
+    d.exec('DROP TRIGGER IF EXISTS temp.accounts_profile_currency')
+    return
+  }
+  d.exec(`
+    CREATE TEMP TRIGGER IF NOT EXISTS accounts_profile_currency
+    AFTER INSERT ON main.accounts
+    WHEN NEW.currency = 'FCFA'
+      AND (SELECT currency FROM main.profile WHERE id = 1) IS NOT NULL
+    BEGIN
+      UPDATE accounts SET currency = (SELECT currency FROM main.profile WHERE id = 1)
+      WHERE id = NEW.id;
+    END
+  `)
 }
 
 // Ionicons name of each built-in category, keyed by the normalized name
@@ -197,21 +274,26 @@ function seedDefaults() {
   if (count > 0) return
 
   const cats = [
-    { name: 'Nourriture',  flow: 'DEBIT',  color: '#F59E0B' },
-    { name: 'Essence',     flow: 'DEBIT',  color: '#EF4444' },
-    { name: 'Transport',   flow: 'DEBIT',  color: '#8B5CF6' },
-    { name: 'Sante',       flow: 'DEBIT',  color: '#EC4899' },
-    { name: 'Vetements',   flow: 'DEBIT',  color: '#06B6D4' },
-    { name: 'Loisirs',     flow: 'DEBIT',  color: '#84CC16' },
-    { name: 'Factures',    flow: 'DEBIT',  color: '#F97316' },
-    { name: 'Salaire',     flow: 'CREDIT', color: '#10B981' },
-    { name: 'Freelance',   flow: 'CREDIT', color: '#3B82F6' },
-    { name: 'Retrait',     flow: 'BOTH',   color: '#6B7280' },
-    { name: 'Autres',      flow: 'BOTH',   color: '#94A3B8' },
+    { key: 'food',       flow: 'DEBIT',  color: '#F59E0B' },
+    { key: 'fuel',       flow: 'DEBIT',  color: '#EF4444' },
+    { key: 'transport',  flow: 'DEBIT',  color: '#8B5CF6' },
+    { key: 'health',     flow: 'DEBIT',  color: '#EC4899' },
+    { key: 'clothes',    flow: 'DEBIT',  color: '#06B6D4' },
+    { key: 'leisure',    flow: 'DEBIT',  color: '#84CC16' },
+    { key: 'bills',      flow: 'DEBIT',  color: '#F97316' },
+    { key: 'salary',     flow: 'CREDIT', color: '#10B981' },
+    { key: 'freelance',  flow: 'CREDIT', color: '#3B82F6' },
+    { key: 'withdrawal', flow: 'BOTH',   color: '#6B7280' },
+    { key: 'other',      flow: 'BOTH',   color: '#94A3B8' },
   ]
 
+  // Seeded with the French default name (the stored name the UI translates
+  // through builtin_key while it stays a default name)
   const ins = db.prepare(
-    'INSERT INTO categories (name, flow, color, icon) VALUES (@name, @flow, @color, @icon)'
+    'INSERT INTO categories (name, flow, color, icon, builtin_key) VALUES (@name, @flow, @color, @icon, @key)'
   )
-  for (const c of cats) ins.run({ ...c, icon: BUILTIN_CATEGORY_ICONS[normalizeName(c.name)] || null })
+  for (const c of cats) {
+    const name = BUILTIN_CATEGORIES.find(b => b.key === c.key).fr
+    ins.run({ ...c, name, icon: BUILTIN_CATEGORY_ICONS[normalizeName(name)] || null })
+  }
 }
