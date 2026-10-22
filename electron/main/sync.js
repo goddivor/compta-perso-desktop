@@ -2,7 +2,10 @@ import { app } from 'electron'
 import { join } from 'path'
 import { hostname } from 'os'
 import { readFileSync, writeFileSync, existsSync, rmSync } from 'fs'
-import { getDb, tableColumns, backfillFeeRules, backfillCategoryIcons } from './db.js'
+import {
+  getDb, tableColumns, backfillFeeRules, backfillCategoryIcons, backfillBuiltinKeys,
+  setAccountCurrencyDefault,
+} from './db.js'
 
 // Tables carried by a snapshot (push and pull). profile and fee_rules are v2:
 // an old snapshot may lack them, see restoreLocalData. Same list as the
@@ -95,7 +98,7 @@ async function api(cfg, path, options = {}) {
   return body
 }
 
-function dumpLocalData() {
+export function dumpLocalData() {
   const db = getDb()
   const data = {}
   for (const t of TABLES) {
@@ -143,8 +146,11 @@ function insertRows(db, table, rows) {
 // Old snapshots (v1 clients, or a server without the v2 tables):
 // - no profile with a currency → the local profile is kept (not wiped);
 // - no fee_rules → each account with a fees_rate gets its percent rule back;
-// - built-in categories without an icon get theirs.
-function restoreLocalData(data) {
+// - built-in categories without an icon get theirs;
+// - categories sent without a builtin_key field get theirs by name (a row
+//   that carries the field, even null, keeps it as sent).
+// Every column, builtin_key and accounts.currency included, is stored as sent.
+export function restoreLocalData(data) {
   if (!isValidSnapshot(data)) throw new Error('Invalid snapshot: nothing restored')
   const db = getDb()
   // A snapshot profile counts only when it carries a currency; it is always
@@ -153,7 +159,12 @@ function restoreLocalData(data) {
     ? data.profile.find(p => p && typeof p === 'object' && p.currency)
     : null
   const tables = snapProfile ? TABLES : TABLES.filter(t => t !== 'profile')
+  const keylessIds = new Set(
+    data.categories.filter(c => c && typeof c === 'object' && !('builtin_key' in c)).map(c => c.id)
+  )
   db.pragma('foreign_keys = OFF')
+  // Snapshot accounts keep the currency they carry
+  setAccountCurrencyDefault(db, false)
   try {
     db.transaction(() => {
       for (const t of tables) db.prepare(`DELETE FROM ${t}`).run()
@@ -166,8 +177,10 @@ function restoreLocalData(data) {
       db.prepare('INSERT OR IGNORE INTO profile (id) VALUES (1)').run()
       backfillFeeRules(db)
       backfillCategoryIcons(db)
+      if (keylessIds.size) backfillBuiltinKeys(db, keylessIds)
     })()
   } finally {
+    setAccountCurrencyDefault(db, true)
     db.pragma('foreign_keys = ON')
   }
 }
