@@ -4,7 +4,7 @@ import { Button } from './ui/Button'
 import { Input, Select } from './ui/Field'
 import { Spinner } from './ui/Spinner'
 import { useAsync } from '../hooks/useAsync'
-import { catName, sortCategories } from '../utils/categories'
+import { catName, nameToSave, sortCategories } from '../utils/categories'
 import { useT, useI18n } from '../i18n'
 import { Plus, Trash2, Pencil, Check, X, Globe, Github, RefreshCw, Download, RotateCcw } from 'lucide-react'
 
@@ -30,14 +30,16 @@ function CategoryCard({ cat, onSaved, onDeleted }) {
   const t = useT()
   const [editing, setEditing] = useState(false)
   // A built-in category shows (and is edited from) its translated name; an
-  // untouched name saves the stored one, so it is never rewritten
+  // untouched name saves the stored one, so it is never rewritten. The name
+  // shown when the edit opened is kept: the language may change before save
   const label = catName(t, cat)
   const [form, setForm] = useState({ name: label, flow: cat.flow, color: cat.color || '#6B7280' })
+  const [shownAtEdit, setShownAtEdit] = useState(label)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
-  const startEdit = () => { setForm(f => ({ ...f, name: label })); setEditing(true) }
+  const startEdit = () => { setForm(f => ({ ...f, name: label })); setShownAtEdit(label); setEditing(true) }
 
   const save = async () => {
-    const name = form.name === label ? cat.name : form.name
+    const name = nameToSave(cat.name, shownAtEdit, form.name)
     await window.api.categories.update({ id: cat.id, ...form, name })
     setEditing(false)
     onSaved()
