@@ -27,7 +27,7 @@ export function resolveAmountFormat(code, iso2, { countries, currencies }) {
   const symbol = cur ? stripInvisible(currencySymbol(cur, iso)) : ''
   const country = iso ? (countries || []).find((c) => c.iso2 === iso) : null
   const af = country?.amountFormat
-  if (!af) {
+  if (!af || typeof af !== 'object') {
     const compact = symbol.replace(/\s+/g, '')
     return { label: compact || code, format: null }
   }
