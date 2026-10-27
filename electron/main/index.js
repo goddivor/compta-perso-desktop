@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import { registerIpcHandlers } from './ipc/index.js'
 import { scheduleStartupCheck } from './updater.js'
+import { checkRegistry } from './registry.js'
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -33,6 +34,12 @@ app.whenReady().then(() => {
   registerIpcHandlers()
   createWindow()
   scheduleStartupCheck()
+  // Registry data (amount formats, currency symbols): background check, at
+  // most once per 24 h; the windows re-read the format when a file changed
+  checkRegistry().then((changed) => {
+    if (!changed.length) return
+    for (const w of BrowserWindow.getAllWindows()) w.webContents.send('registry:updated', changed)
+  })
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
