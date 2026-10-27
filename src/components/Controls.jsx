@@ -3,6 +3,7 @@ import { Select, Input } from './ui/Field'
 import { Button } from './ui/Button'
 import { useT } from '../i18n'
 import { fmtRate } from './FeeRuleModal'
+import { catName, sortCategories } from '../utils/categories'
 import { Plus, ArrowLeftRight, TrendingUp, Table2, GitBranch, SlidersHorizontal, X, CalendarDays, Percent } from 'lucide-react'
 
 const hasActiveFilters = f => f.type || f.category_id || f.date_from || f.date_to
@@ -162,8 +163,8 @@ export function Controls({
             className="bg-surface2 border border-edge rounded-lg px-2 py-1.5 text-ink text-xs focus:outline-none focus:border-primary"
           >
             <option value="">{t('controls.allCategories')}</option>
-            {(categories || []).map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+            {sortCategories(t, categories).map(c => (
+              <option key={c.id} value={c.id}>{catName(t, c)}</option>
             ))}
           </select>
 

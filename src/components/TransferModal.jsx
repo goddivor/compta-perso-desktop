@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Modal } from './ui/Modal'
 import { Button } from './ui/Button'
-import { Field, Input, Select } from './ui/Field'
+import { Field, Input, AmountInput, Select } from './ui/Field'
 import { today, fmt } from '../utils/format'
 import { useT } from '../i18n'
 
@@ -53,11 +53,11 @@ export function TransferModal({ isOpen, onClose, onSave, accounts }) {
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label={t('transfer.amountFcfa')}>
-            <Input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="0" />
+          <Field label={t('transfer.amount')}>
+            <AmountInput value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="0" />
           </Field>
-          <Field label={t('transfer.feesFcfa')}>
-            <Input type="number" value={form.fees} onChange={e => set('fees', e.target.value)} placeholder="0" />
+          <Field label={t('transfer.fees')}>
+            <AmountInput value={form.fees} onChange={e => set('fees', e.target.value)} placeholder="0" />
           </Field>
         </div>
 

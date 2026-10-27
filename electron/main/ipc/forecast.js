@@ -26,7 +26,8 @@ export function registerForecastHandlers() {
     const session = db.prepare('SELECT * FROM forecast_sessions WHERE id=?').get(id)
     const transactions = db.prepare(`
       SELECT t.*, a.name AS account_name,
-        c.name AS category_name, c.color AS category_color, c.icon AS category_icon
+        c.name AS category_name, c.color AS category_color, c.icon AS category_icon,
+        c.builtin_key AS category_builtin_key
       FROM transactions t
       LEFT JOIN accounts a ON t.account_id = a.id
       LEFT JOIN categories c ON t.category_id = c.id

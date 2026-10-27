@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react'
-import { fmt, fmtDate } from '../utils/format'
+import { fmtSigned, fmtDate } from '../utils/format'
+import { txCategoryName } from '../utils/categories'
 import { Badge } from './ui/Badge'
 import { Spinner, Empty } from './ui/Spinner'
 import { Edit2, Trash2, ArrowLeftRight } from 'lucide-react'
@@ -70,13 +71,13 @@ export function TableView({ transactions, loading, onEdit, onDelete }) {
                 </td>
                 <td className="px-3 py-2.5">
                   {tx.category_name
-                    ? <Badge color={tx.category_color}>{tx.category_name}</Badge>
+                    ? <Badge color={tx.category_color}>{txCategoryName(t, tx)}</Badge>
                     : <span className="text-faint text-xs">—</span>}
                 </td>
                 <td className={`px-4 py-2.5 text-right font-mono font-medium whitespace-nowrap ${
                   tx.type === 'CREDIT' ? 'text-emerald-400' : 'text-rose-400'
                 }`}>
-                  {tx.type === 'CREDIT' ? '+' : '-'}{fmt(tx.amount)}
+                  {fmtSigned(tx.type, tx.amount)}
                 </td>
                 <td className="px-3 py-2.5">
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">

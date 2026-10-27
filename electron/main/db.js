@@ -181,9 +181,26 @@ export function backfillBuiltinKeys(d, onlyIds) {
   }
 }
 
-// New accounts store the profile currency code. The renderer still sends the
-// column default 'FCFA'; while a profile currency exists, this connection-only
-// (TEMP) trigger replaces it on the row just inserted. Existing rows are never
+// Currency of the ledger: { code, iso2 }. The profile currency and country
+// (set on the phone, carried by sync); without a profile currency, the
+// currency most accounts store (legacy rows: 'FCFA') and no country; null
+// when there is neither. Read only: nothing is written.
+export function ledgerCurrency(d) {
+  const p = d.prepare('SELECT currency, country_iso2 FROM profile WHERE id = 1').get()
+  if (p?.currency) return { code: p.currency, iso2: p.country_iso2 || null }
+  const a = d.prepare(`
+    SELECT currency FROM accounts
+    WHERE currency IS NOT NULL AND TRIM(currency) <> ''
+    GROUP BY currency ORDER BY COUNT(*) DESC, MIN(id) LIMIT 1
+  `).get()
+  return { code: a?.currency || null, iso2: null }
+}
+
+// New accounts store the ledger currency (ledgerCurrency, chosen by the
+// accounts:create handler), else the column default 'FCFA'. A row inserted
+// with 'FCFA' (older renderer, or no currency known at that time) while a
+// profile currency exists gets the profile currency from this connection-only
+// (TEMP) trigger. Existing rows are never
 // rewritten, and nothing is written to the database file's schema. A restore
 // turns it off so snapshot rows keep their stored currency.
 export function setAccountCurrencyDefault(d, on) {

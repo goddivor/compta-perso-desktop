@@ -52,6 +52,14 @@ contextBridge.exposeInMainWorld('api', {
     pull:        () => invoke('sync:pull'),
     status:      () => invoke('sync:status'),
   },
+  registry: {
+    getAmountFormat: () => invoke('registry:getAmountFormat'),
+    onUpdated: (cb) => {
+      const listener = (_, paths) => cb(paths)
+      ipcRenderer.on('registry:updated', listener)
+      return () => ipcRenderer.removeListener('registry:updated', listener)
+    },
+  },
   app: {
     getVersion:   ()    => invoke('app:getVersion'),
     openExternal: (url) => invoke('app:openExternal', url),

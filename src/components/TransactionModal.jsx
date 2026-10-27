@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Modal } from './ui/Modal'
 import { Button } from './ui/Button'
-import { Field, Input, Select, Textarea } from './ui/Field'
-import { fmt, today } from '../utils/format'
+import { Field, Input, AmountInput, Select, Textarea } from './ui/Field'
+import { fmt, fmtSigned, today } from '../utils/format'
+import { catName, sortCategories } from '../utils/categories'
 import { useT } from '../i18n'
 import { fmtRate } from './FeeRuleModal'
 
@@ -58,7 +59,7 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
     setApplyFeeRule(false)
   }, [isOpen])
 
-  const filteredCats   = categories || []
+  const filteredCats   = sortCategories(t, categories)
   const otherAccounts  = (accounts || []).filter(a => String(a.id) !== String(form.account_id))
   const isTransfer     = !!form.linked_account_id
   const baseAmount     = parseFloat(form.amount) || 0
@@ -164,16 +165,15 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
               <option value="CREDIT">{t('tx.creditIncome')}</option>
             </Select>
           </Field>
-          <Field label={t('tx.amountFcfa')}>
-            <Input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="0" min="0" />
+          <Field label={t('tx.amount')}>
+            <AmountInput value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="0" min="0" />
           </Field>
         </div>
 
         {/* Frais + case à cocher règle auto */}
         <div className="space-y-1.5">
-          <Field label={isTransfer ? t('tx.transferFeesFcfa') : t('tx.feesFcfa')}>
-            <Input
-              type="number"
+          <Field label={isTransfer ? t('tx.transferFees') : t('tx.fees')}>
+            <AmountInput
               value={applyFeeRule && feeRate != null ? String(autoFees) : form.fees}
               onChange={e => { setApplyFeeRule(false); set('fees', e.target.value) }}
               placeholder="0"
@@ -215,12 +215,12 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
               <>
                 <p className="text-muted">
                   {t('common.debit')} <span style={{ color: sourceAccount.color }} className="font-medium">{sourceAccount.name}</span>
-                  {' '}: <span className="text-rose-400 font-medium">-{fmt(totalDebit)}</span>
+                  {' '}: <span className="text-rose-400 font-medium">{fmtSigned('DEBIT', totalDebit)}</span>
                   {feesAmt > 0 && <span className="text-xs text-faint ml-1">{t('tx.inclFees', { x: fmt(feesAmt) })}</span>}
                 </p>
                 <p className="text-muted">
                   {t('common.credit')} <span style={{ color: currentAccount?.color }} className="font-medium">{currentAccount?.name}</span>
-                  {' '}: <span className="text-emerald-400 font-medium">+{fmt(baseAmount)}</span>
+                  {' '}: <span className="text-emerald-400 font-medium">{fmtSigned('CREDIT', baseAmount)}</span>
                 </p>
               </>
             )}
@@ -228,12 +228,12 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
               <>
                 <p className="text-muted">
                   {t('common.debit')} <span style={{ color: currentAccount?.color }} className="font-medium">{currentAccount?.name}</span>
-                  {' '}: <span className="text-rose-400 font-medium">-{fmt(totalDebit)}</span>
+                  {' '}: <span className="text-rose-400 font-medium">{fmtSigned('DEBIT', totalDebit)}</span>
                   {feesAmt > 0 && <span className="text-xs text-faint ml-1">{t('tx.inclFees', { x: fmt(feesAmt) })}</span>}
                 </p>
                 <p className="text-muted">
                   {t('common.credit')} <span style={{ color: destAccount.color }} className="font-medium">{destAccount.name}</span>
-                  {' '}: <span className="text-emerald-400 font-medium">+{fmt(baseAmount)}</span>
+                  {' '}: <span className="text-emerald-400 font-medium">{fmtSigned('CREDIT', baseAmount)}</span>
                 </p>
               </>
             )}
@@ -247,7 +247,7 @@ export function TransactionModal({ isOpen, onClose, onSave, tx, accounts, catego
           <Field label={t('common.category')}>
             <Select value={form.category_id} onChange={e => set('category_id', e.target.value)}>
               <option value="">{t('tx.noCategory')}</option>
-              {filteredCats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {filteredCats.map(c => <option key={c.id} value={c.id}>{catName(t, c)}</option>)}
             </Select>
           </Field>
         </div>

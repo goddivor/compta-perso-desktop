@@ -3,8 +3,9 @@ import { useAsync } from '../hooks/useAsync'
 import { Modal } from './ui/Modal'
 import { Button } from './ui/Button'
 import { Spinner } from './ui/Spinner'
-import { fmt, fmtDate, today } from '../utils/format'
-import { Input, Select } from './ui/Field'
+import { fmtNet, fmtSigned, fmtDate, today } from '../utils/format'
+import { Input, AmountInput, Select } from './ui/Field'
+import { catName, sortCategories, txCategoryName } from '../utils/categories'
 import { useT } from '../i18n'
 import { Plus, ChevronRight, ChevronDown, CheckCircle, Trash2, GitBranch, Pencil, TrendingUp, TrendingDown } from 'lucide-react'
 
@@ -21,7 +22,7 @@ const emptyTx = (accounts, defaultAccountId) => ({
 
 function TxForm({ form, set, accounts, categories, onSave, onCancel }) {
   const t = useT()
-  const filteredCats = (categories || []).filter(
+  const filteredCats = sortCategories(t, categories).filter(
     c => c.flow === 'BOTH' || c.flow === form.type
   )
   const isTransfer = !!form.linked_account_id
@@ -64,21 +65,21 @@ function TxForm({ form, set, accounts, categories, onSave, onCancel }) {
           </Select>
         </div>
         <div>
-          <label className="block text-xs text-muted mb-1">{t('tx.amountFcfa')}</label>
-          <Input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="0" min="0" />
+          <label className="block text-xs text-muted mb-1">{t('tx.amount')}</label>
+          <AmountInput value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="0" min="0" />
         </div>
         <div>
           {isTransfer ? (
             <>
               <label className="block text-xs text-muted mb-1">{t('controls.fees')}</label>
-              <Input type="number" value={form.fees} onChange={e => set('fees', e.target.value)} placeholder="0" min="0" />
+              <AmountInput value={form.fees} onChange={e => set('fees', e.target.value)} placeholder="0" min="0" />
             </>
           ) : (
             <>
               <label className="block text-xs text-muted mb-1">{t('common.category')}</label>
               <Select value={form.category_id} onChange={e => set('category_id', e.target.value)}>
                 <option value="">{t('forecast.noCategory')}</option>
-                {filteredCats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {filteredCats.map(c => <option key={c.id} value={c.id}>{catName(t, c)}</option>)}
               </Select>
             </>
           )}
@@ -172,7 +173,7 @@ function SessionDetail({ session, accounts, categories, defaultAccountId, onChan
             ? <TrendingUp size={15} className="text-emerald-400" />
             : <TrendingDown size={15} className="text-rose-400" />}
           <span className={`text-sm font-bold ${net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-            {net >= 0 ? '+' : ''}{fmt(net)} FCFA
+            {fmtNet(net, { zeroPlus: true })}
           </span>
         </div>
         {!isValidated && txs.length > 0 && (
@@ -193,11 +194,11 @@ function SessionDetail({ session, accounts, categories, defaultAccountId, onChan
             <div key={tx.id} className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface2/50 transition-colors">
               <div className={`w-1.5 h-8 rounded-full shrink-0 ${tx.type === 'CREDIT' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-content truncate">{tx.description || tx.category_name || '—'}</p>
+                <p className="text-sm text-content truncate">{tx.description || txCategoryName(t, tx) || '—'}</p>
                 <p className="text-xs text-faint">{fmtDate(tx.date)} · {tx.account_name}</p>
               </div>
               <span className={`text-sm font-mono font-semibold shrink-0 ${tx.type === 'CREDIT' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {tx.type === 'CREDIT' ? '+' : '-'}{fmt(tx.amount)}
+                {fmtSigned(tx.type, tx.amount)}
               </span>
               {!isValidated && (
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -302,7 +303,7 @@ export function ForecastModal({ isOpen, onClose, onSave, accounts, categories, d
                       </p>
                     </div>
                     <span className={`text-sm font-bold shrink-0 ${s.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {s.net >= 0 ? '+' : ''}{fmt(s.net)}
+                      {fmtNet(s.net, { zeroPlus: true })}
                     </span>
                     {s.validated_at ? (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-900/30 text-emerald-400 font-medium ml-1">
