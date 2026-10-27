@@ -40,6 +40,12 @@ export const catName = (t, c) => (c ? categoryLabel(t, c.builtin_key, c.name) : 
 export const txCategoryName = (t, tx) =>
   tx?.category_name ? categoryLabel(t, tx.category_builtin_key, tx.category_name) : tx?.category_name
 
+// Name to store when an edit is saved: the stored name while the text is the
+// one shown when the edit opened (whatever the language is now), else the
+// typed text. An untouched built-in name is never rewritten.
+export const nameToSave = (storedName, shownAtEdit, typed) =>
+  (typed === shownAtEdit ? storedName : typed)
+
 // Categories in the order of the list (flow, then shown name)
 export const sortCategories = (t, cats) =>
   [...(cats || [])].sort((a, b) =>
