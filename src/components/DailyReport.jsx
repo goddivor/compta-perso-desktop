@@ -1,5 +1,5 @@
 import { useAsync } from '../hooks/useAsync'
-import { fmt } from '../utils/format'
+import { fmtNet, fmtSigned } from '../utils/format'
 import { Spinner } from './ui/Spinner'
 import { useI18n } from '../i18n'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
@@ -48,16 +48,16 @@ export function DailyReport({ filters, tick }) {
         </div>
         <div className="flex flex-col px-6 py-3 border-r border-edge">
           <span className="text-xs text-muted mb-0.5">{t('report.totalIn')}</span>
-          <span className="text-sm font-bold text-emerald-400">+{fmt(totalCredit)}</span>
+          <span className="text-sm font-bold text-emerald-400">{fmtSigned('CREDIT', totalCredit)}</span>
         </div>
         <div className="flex flex-col px-6 py-3 border-r border-edge">
           <span className="text-xs text-muted mb-0.5">{t('report.totalOut')}</span>
-          <span className="text-sm font-bold text-rose-400">-{fmt(totalDebit)}</span>
+          <span className="text-sm font-bold text-rose-400">{fmtSigned('DEBIT', totalDebit)}</span>
         </div>
         <div className="flex flex-col px-6 py-3">
           <span className="text-xs text-muted mb-0.5">{t('report.netBalance')}</span>
           <span className={`text-sm font-bold ${totalNet >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-            {totalNet >= 0 ? '+' : ''}{fmt(totalNet)}
+            {fmtNet(totalNet, { zeroPlus: true })}
           </span>
         </div>
       </div>
@@ -84,14 +84,14 @@ export function DailyReport({ filters, tick }) {
                   </td>
                   <td className="px-4 py-3 text-right">
                     {row.total_credit > 0 ? (
-                      <span className="text-sm font-mono text-emerald-400">+{fmt(row.total_credit)}</span>
+                      <span className="text-sm font-mono text-emerald-400">{fmtSigned('CREDIT', row.total_credit)}</span>
                     ) : (
                       <span className="text-faint">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
                     {row.total_debit > 0 ? (
-                      <span className="text-sm font-mono text-rose-400">-{fmt(row.total_debit)}</span>
+                      <span className="text-sm font-mono text-rose-400">{fmtSigned('DEBIT', row.total_debit)}</span>
                     ) : (
                       <span className="text-faint">—</span>
                     )}
@@ -106,7 +106,7 @@ export function DailyReport({ filters, tick }) {
                       <span className={`text-sm font-bold font-mono ${
                         net > 0 ? 'text-emerald-400' : net < 0 ? 'text-rose-400' : 'text-muted'
                       }`}>
-                        {net > 0 ? '+' : ''}{fmt(net)}
+                        {fmtNet(net)}
                       </span>
                     </div>
                   </td>

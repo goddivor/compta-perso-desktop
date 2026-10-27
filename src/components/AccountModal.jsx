@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Modal } from './ui/Modal'
 import { Button } from './ui/Button'
-import { Field, Input, Select } from './ui/Field'
+import { Field, Input, AmountInput, Select } from './ui/Field'
 import { useT } from '../i18n'
 
 const COLORS = ['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#06B6D4','#F97316','#6B7280','#84CC16']
-const empty  = { name: '', type: 'ELECTRONIC', provider: '', initial_balance: '', currency: 'FCFA', color: '#3B82F6' }
+// No currency: a new account gets the ledger currency in the main process
+// (accounts:create); an edit never changes the stored one
+const empty  = { name: '', type: 'ELECTRONIC', provider: '', initial_balance: '', color: '#3B82F6' }
 
 export function AccountModal({ isOpen, onClose, onSave, account }) {
   const t = useT()
@@ -45,7 +47,7 @@ export function AccountModal({ isOpen, onClose, onSave, account }) {
         )}
 
         <Field label={t('account.initialBalance')}>
-          <Input type="number" value={form.initial_balance} onChange={e => set('initial_balance', e.target.value)} placeholder="0" />
+          <AmountInput value={form.initial_balance} onChange={e => set('initial_balance', e.target.value)} placeholder="0" />
         </Field>
 
         <Field label={t('common.color')}>

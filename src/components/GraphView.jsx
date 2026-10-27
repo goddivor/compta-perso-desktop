@@ -4,7 +4,8 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { Locate, Plus, Minus } from 'lucide-react'
-import { fmt, fmtDate } from '../utils/format'
+import { fmt, fmtSigned, fmtDate } from '../utils/format'
+import { txCategoryName } from '../utils/categories'
 import { useI18n } from '../i18n'
 
 const SIM_COLORS = ['#F59E0B', '#818CF8', '#34D399', '#F472B6', '#60A5FA', '#FB923C']
@@ -61,7 +62,7 @@ function TxNode({ data }) {
         }}
       >
         <span className={`text-[11px] font-bold leading-tight whitespace-nowrap ${credit ? 'text-emerald-400' : 'text-rose-400'}`}>
-          {(credit ? '+' : '-') + fmt(tx.amount)}
+          {fmtSigned(credit ? 'CREDIT' : 'DEBIT', tx.amount)}
         </span>
         <span className="text-[10px] text-muted leading-tight">{data.shortDate}</span>
         <Handle id="top" type="target" position={Position.Top} style={hiddenHandle} isConnectable={false} />
@@ -102,7 +103,7 @@ function buildFlow(transactions, accounts, t) {
   const base = { draggable: false, selectable: false, connectable: false }
 
   const txLabel = tx =>
-    tx.description || tx.category_name || (tx.type === 'CREDIT' ? t('common.credit') : t('common.debit'))
+    tx.description || txCategoryName(t, tx) || (tx.type === 'CREDIT' ? t('common.credit') : t('common.debit'))
 
   const arrow = color => ({ type: MarkerType.ArrowClosed, color, width: 14, height: 14 })
 
@@ -372,7 +373,7 @@ function GraphInner({ transactions, accounts }) {
           <p className="text-content mt-0.5">{tooltip.node.point.label}</p>
           {tooltip.node.point.tx && (
             <p className={`mt-0.5 font-mono ${tooltip.node.point.tx.type === 'CREDIT' ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {tooltip.node.point.tx.type === 'CREDIT' ? '+' : '-'}{fmt(tooltip.node.point.tx.amount)}
+              {fmtSigned(tooltip.node.point.tx.type, tooltip.node.point.tx.amount)}
             </p>
           )}
           <p className="font-bold text-ink mt-1">{fmt(tooltip.node.point.balance)}</p>
