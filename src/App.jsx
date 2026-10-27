@@ -14,12 +14,14 @@ import { SyncModal } from './components/SyncModal'
 import { DailyReport } from './components/DailyReport'
 import { Spinner } from './components/ui/Spinner'
 import { useT } from './i18n'
-import { CurrencyProvider } from './context/CurrencyContext'
+import { useAmountFormat } from './context/CurrencyContext'
 
 const emptyFilters = { account_id: '', type: '', category_id: '', date_from: '', date_to: '' }
 
 export default function App() {
   const t = useT()
+  // Subscribed so that a new amount format re-renders the whole tree
+  const { reload: reloadAmountFormat } = useAmountFormat()
   const [filters, setFilters] = useState(emptyFilters)
   const [showForecast, setShowForecast] = useState(false)
   const [viewMode, setViewMode] = useState('tableau')
@@ -32,6 +34,8 @@ export default function App() {
 
   const [tick, setTick] = useState(0)
   const refetch = useCallback(() => setTick(t => t + 1), [])
+  // A data change (sync pull, settings) may bring a new profile currency
+  useEffect(() => { if (tick) reloadAmountFormat() }, [tick, reloadAmountFormat])
 
   const [updateInfo, setUpdateInfo] = useState(null)
   useEffect(() => {
@@ -69,7 +73,6 @@ export default function App() {
   const handleSave = () => { refetch(); closeModal() }
 
   return (
-    <CurrencyProvider tick={tick}>
     <div className="h-screen flex flex-col bg-base text-ink overflow-hidden">
       {updateInfo && (
         <div className="flex items-center justify-center gap-3 px-4 py-1.5 bg-primary/10 border-b border-primary/30 text-xs text-content">
@@ -198,6 +201,5 @@ export default function App() {
         />
       )}
     </div>
-    </CurrencyProvider>
   )
 }
