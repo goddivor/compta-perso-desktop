@@ -1,6 +1,6 @@
 {
   "name": "compta-perso",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Comptabilité personnelle locale",
   "author": "Divor",
   "homepage": "https://github.com/divor/compta-perso",
@@ -93,12 +93,9 @@
     "@fontsource/poppins": "^5.2.7",
     "@xyflow/react": "^12.11.2",
     "better-sqlite3": "^11.5.0",
-    "chart.js": "^4.4.6",
     "electron-updater": "^6.8.9",
     "lucide-react": "^0.460.0",
     "react": "^18.3.1",
-    "react-chartjs-2": "^5.2.0",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.28.0"
+    "react-dom": "^18.3.1"
   }
 }

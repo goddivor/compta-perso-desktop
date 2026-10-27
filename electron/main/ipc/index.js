@@ -6,6 +6,7 @@ import { registerForecastHandlers }     from './forecast.js'
 import { registerStatsHandlers }        from './stats.js'
 import { registerSyncHandlers }         from './sync.js'
 import { registerUpdatesHandlers }      from './updates.js'
+import { registerRegistryHandlers }     from './registry.js'
 
 export function registerIpcHandlers() {
   registerAccountsHandlers()
@@ -16,4 +17,5 @@ export function registerIpcHandlers() {
   registerStatsHandlers()
   registerSyncHandlers()
   registerUpdatesHandlers()
+  registerRegistryHandlers()
 }

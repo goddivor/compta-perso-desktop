@@ -40,9 +40,6 @@ contextBridge.exposeInMainWorld('api', {
   stats: {
     getSummary:           ()  => invoke('stats:getSummary'),
     getDailyReport:       (p) => invoke('stats:getDailyReport', p),
-    getBalanceHistory:    (p) => invoke('stats:getBalanceHistory', p),
-    getExpensesByCategory:(p) => invoke('stats:getExpensesByCategory', p),
-    getMonthlyFlow:       (p) => invoke('stats:getMonthlyFlow', p),
   },
   sync: {
     getConfig:   () => invoke('sync:getConfig'),
@@ -51,6 +48,14 @@ contextBridge.exposeInMainWorld('api', {
     push:        () => invoke('sync:push'),
     pull:        () => invoke('sync:pull'),
     status:      () => invoke('sync:status'),
+  },
+  registry: {
+    getAmountFormat: () => invoke('registry:getAmountFormat'),
+    onUpdated: (cb) => {
+      const listener = (_, paths) => cb(paths)
+      ipcRenderer.on('registry:updated', listener)
+      return () => ipcRenderer.removeListener('registry:updated', listener)
+    },
   },
   app: {
     getVersion:   ()    => invoke('app:getVersion'),

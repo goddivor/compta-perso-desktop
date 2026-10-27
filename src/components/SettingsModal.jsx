@@ -4,6 +4,7 @@ import { Button } from './ui/Button'
 import { Input, Select } from './ui/Field'
 import { Spinner } from './ui/Spinner'
 import { useAsync } from '../hooks/useAsync'
+import { catName, nameToSave, sortCategories } from '../utils/categories'
 import { useT, useI18n } from '../i18n'
 import { Plus, Trash2, Pencil, Check, X, Globe, Github, RefreshCw, Download, RotateCcw } from 'lucide-react'
 
@@ -28,16 +29,23 @@ function ColorPicker({ value, onChange }) {
 function CategoryCard({ cat, onSaved, onDeleted }) {
   const t = useT()
   const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState({ name: cat.name, flow: cat.flow, color: cat.color || '#6B7280' })
+  // A built-in category shows (and is edited from) its translated name; an
+  // untouched name saves the stored one, so it is never rewritten. The name
+  // shown when the edit opened is kept: the language may change before save
+  const label = catName(t, cat)
+  const [form, setForm] = useState({ name: label, flow: cat.flow, color: cat.color || '#6B7280' })
+  const [shownAtEdit, setShownAtEdit] = useState(label)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const startEdit = () => { setForm(f => ({ ...f, name: label })); setShownAtEdit(label); setEditing(true) }
 
   const save = async () => {
-    await window.api.categories.update({ id: cat.id, ...form })
+    const name = nameToSave(cat.name, shownAtEdit, form.name)
+    await window.api.categories.update({ id: cat.id, ...form, name })
     setEditing(false)
     onSaved()
   }
   const remove = async () => {
-    if (!confirm(t('settings.confirmDeleteCat', { name: cat.name }))) return
+    if (!confirm(t('settings.confirmDeleteCat', { name: label }))) return
     await window.api.categories.remove(cat.id)
     onDeleted()
   }
@@ -70,7 +78,7 @@ function CategoryCard({ cat, onSaved, onDeleted }) {
     <div className="group bg-surface2/60 hover:bg-surface2 rounded-xl p-3 border border-edge/40 hover:border-edge transition-all flex flex-col gap-2">
       <div className="flex items-center gap-2 min-w-0">
         <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cat.color || '#6B7280' }} />
-        <span className="text-sm text-content font-medium truncate">{cat.name}</span>
+        <span className="text-sm text-content font-medium truncate">{label}</span>
       </div>
       <div className="flex items-center justify-between">
         <span className={`text-xs px-2 py-0.5 rounded font-medium ${
@@ -79,7 +87,7 @@ function CategoryCard({ cat, onSaved, onDeleted }) {
           'bg-edge text-muted'
         }`}>{cat.flow}</span>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => setEditing(true)} className="p-1 text-muted hover:text-primary transition-colors">
+          <button onClick={startEdit} className="p-1 text-muted hover:text-primary transition-colors">
             <Pencil size={12} />
           </button>
           <button onClick={remove} className="p-1 text-muted hover:text-rose-400 transition-colors">
@@ -239,7 +247,7 @@ export function SettingsModal({ isOpen, onClose, onSave }) {
           <p className="text-xs text-muted font-medium uppercase tracking-wide mb-3">{t('settings.existing')}</p>
           {loading ? <Spinner /> : (
             <div className="grid grid-cols-3 gap-2 max-h-[55vh] overflow-y-auto pr-1">
-              {(categories || []).map(cat => (
+              {sortCategories(t, categories).map(cat => (
                 <CategoryCard key={cat.id} cat={cat} onSaved={refresh} onDeleted={refresh} />
               ))}
             </div>

@@ -24,7 +24,7 @@ export function registerTransactionsHandlers() {
     const sql = `
       SELECT t.*,
         a.name AS account_name, a.type AS account_type, a.color AS account_color,
-        c.name AS category_name, c.color AS category_color,
+        c.name AS category_name, c.color AS category_color, c.builtin_key AS category_builtin_key,
         fs.name AS forecast_session_name
       FROM transactions t
       LEFT JOIN accounts a ON t.account_id = a.id

@@ -14,11 +14,14 @@ import { SyncModal } from './components/SyncModal'
 import { DailyReport } from './components/DailyReport'
 import { Spinner } from './components/ui/Spinner'
 import { useT } from './i18n'
+import { useAmountFormat } from './context/CurrencyContext'
 
 const emptyFilters = { account_id: '', type: '', category_id: '', date_from: '', date_to: '' }
 
 export default function App() {
   const t = useT()
+  // Subscribed so that a new amount format re-renders the whole tree
+  const { reload: reloadAmountFormat } = useAmountFormat()
   const [filters, setFilters] = useState(emptyFilters)
   const [showForecast, setShowForecast] = useState(false)
   const [viewMode, setViewMode] = useState('tableau')
@@ -31,6 +34,8 @@ export default function App() {
 
   const [tick, setTick] = useState(0)
   const refetch = useCallback(() => setTick(t => t + 1), [])
+  // A data change (sync pull, settings) may bring a new profile currency
+  useEffect(() => { if (tick) reloadAmountFormat() }, [tick, reloadAmountFormat])
 
   const [updateInfo, setUpdateInfo] = useState(null)
   useEffect(() => {

@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import { getDb } from '../db.js'
+import { getDb, ledgerCurrency } from '../db.js'
 
 export function registerAccountsHandlers() {
   ipcMain.handle('accounts:getAll', () => {
@@ -15,12 +15,22 @@ export function registerAccountsHandlers() {
     `).all()
   })
 
+  // currency: the one sent, else the ledger currency (profile, else the
+  // accounts' stored one), else the column default 'FCFA'
   ipcMain.handle('accounts:create', (_, data) => {
     const db = getDb()
+    const row = {
+      name: data.name,
+      type: data.type,
+      provider: data.provider || null,
+      initial_balance: data.initial_balance || 0,
+      currency: data.currency || ledgerCurrency(db).code || 'FCFA',
+      color: data.color || '#3B82F6',
+    }
     const r = db.prepare(
       'INSERT INTO accounts (name,type,provider,initial_balance,currency,color) VALUES (@name,@type,@provider,@initial_balance,@currency,@color)'
-    ).run(data)
-    return { id: r.lastInsertRowid, ...data }
+    ).run(row)
+    return db.prepare('SELECT * FROM accounts WHERE id=?').get(r.lastInsertRowid)
   })
 
   // color, fees_rate and operator_id are optional: undefined keeps the stored

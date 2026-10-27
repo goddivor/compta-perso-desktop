@@ -1,0 +1,9 @@
+{
+  "note": "Bundled copy of the registry data files, first-run and offline fallback. Copied from goddivor/compta-perso-registry at the tag and commit below; replaced at run time by the cache in userData/registry/.",
+  "tag": "v2.0.0",
+  "commit": "f46473d40eb836accaa5dda2de26fd5e844ef5be",
+  "files": {
+    "data/countries.json": "e80f5f400c135aeb7bd04b23a522b81b281f928f5593c899b766e27d4ea06e04",
+    "data/currencies.json": "d1bec2d3cea6c25ab43554ea7512f0130511ebd8e3f13c32b279c0294cd5a47c"
+  }
+}
