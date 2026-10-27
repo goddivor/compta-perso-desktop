@@ -1,5 +1,5 @@
 import { useAsync } from '../hooks/useAsync'
-import { fmtNet, fmtSigned } from '../utils/format'
+import { fmt, fmtNet, fmtSigned } from '../utils/format'
 import { Spinner } from './ui/Spinner'
 import { useI18n } from '../i18n'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
@@ -26,6 +26,7 @@ export function DailyReport({ filters, tick }) {
   const totalCredit = rows.reduce((s, r) => s + r.total_credit, 0)
   const totalDebit  = rows.reduce((s, r) => s + r.total_debit, 0)
   const totalNet    = totalCredit - totalDebit
+  // A zero total carries no sign ("0 FCFA", never "−0 FCFA")
 
   if (loading) return (
     <div className="flex items-center justify-center h-full"><Spinner /></div>
@@ -48,11 +49,11 @@ export function DailyReport({ filters, tick }) {
         </div>
         <div className="flex flex-col px-6 py-3 border-r border-edge">
           <span className="text-xs text-muted mb-0.5">{t('report.totalIn')}</span>
-          <span className="text-sm font-bold text-emerald-400">{fmtSigned('CREDIT', totalCredit)}</span>
+          <span className="text-sm font-bold text-emerald-400">{totalCredit > 0 ? fmtSigned('CREDIT', totalCredit) : fmt(0)}</span>
         </div>
         <div className="flex flex-col px-6 py-3 border-r border-edge">
           <span className="text-xs text-muted mb-0.5">{t('report.totalOut')}</span>
-          <span className="text-sm font-bold text-rose-400">{fmtSigned('DEBIT', totalDebit)}</span>
+          <span className="text-sm font-bold text-rose-400">{totalDebit > 0 ? fmtSigned('DEBIT', totalDebit) : fmt(0)}</span>
         </div>
         <div className="flex flex-col px-6 py-3">
           <span className="text-xs text-muted mb-0.5">{t('report.netBalance')}</span>
